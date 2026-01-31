@@ -1,0 +1,340 @@
+/* 1. CẤU HÌNH CHUNG */
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #222;
+    color: white;
+    /* Cho phép cuộn nếu màn hình nhỏ */
+    overflow-y: auto; 
+    overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+/* 2. HEADER (THANH TRÊN CÙNG) */
+#game-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px;
+    background: #333;
+    height: 50px;
+    border-bottom: 2px solid #444;
+}
+
+.user-info {
+    font-weight: bold; color: #f1c40f; font-size: 1.1em;
+}
+
+.header-actions {
+    display: flex; gap: 10px;
+}
+
+/* 3. KHUNG GAME (GAME CONTAINER) - Kích thước rộng hơn */
+#game-container {
+    position: relative;
+    width: 1200px; /* 1200px cho màn hình rộng */
+    height: 600px;
+    /* Margin dưới 100px để không bị thanh công cụ che */
+    margin: 10px auto 100px auto; 
+    background-color: #333;
+    border: 4px solid #555;
+    box-shadow: 0 0 20px black;
+}
+
+#game-canvas {
+    background-color: #4caf50;
+    width: 100%; height: 100%;
+    display: block;
+    cursor: crosshair;
+}
+
+/* 4. HUD (HIỂN THỊ ĐIỂM SỐ TRONG GAME) */
+#game-hud {
+    position: absolute; top: 10px; left: 10px;
+    display: flex; gap: 15px;
+    pointer-events: none;
+}
+
+.hud-item {
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    border: 2px solid #fff;
+}
+
+.sun-display { color: #f1c40f; }
+.score-display { color: #3498db; }
+
+/* 5. BOTTOM TOOLBAR (THANH CÔNG CỤ DƯỚI) */
+#bottom-toolbar {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 100%; 
+    height: 80px; 
+    background: rgba(44, 62, 80, 0.95);
+    border-top: 4px solid #8b4513;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 900;
+}
+
+.toolbar-inner {
+    display: flex; gap: 20px; align-items: center;
+}
+
+#plant-selector { display: flex; gap: 10px; }
+
+/* Card (Dùng chung cho Cây) */
+.plant-card {
+    width: 60px; height: 70px;
+    background: #ecf0f1;
+    border: 3px solid #7f8c8d;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.1s;
+    display: flex; flex-direction: column; 
+    align-items: center; justify-content: center;
+}
+
+.plant-card:hover { transform: scale(1.05); }
+
+.plant-card.selected {
+    border-color: #f1c40f;
+    box-shadow: 0 0 10px #f1c40f;
+    background: #fff;
+}
+
+.card-cost {
+    position: absolute; bottom: 2px; right: 2px;
+    background: #27ae60; color: white;
+    font-size: 10px; padding: 1px 4px; 
+    border-radius: 3px; font-weight: bold;
+}
+
+.card-img img {
+    max-width: 100%; max-height: 100%; 
+    pointer-events: none;
+}
+
+/* STYLE CHO XẺNG Ở GÓC PHẢI DƯỚI */
+.shovel-corner {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 70px;
+    height: 70px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 3px solid #8b4513;
+    border-radius: 50%; /* Hình tròn */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+    z-index: 10;
+}
+
+.shovel-corner img {
+    width: 40px;
+    height: 40px;
+    pointer-events: none;
+}
+
+.shovel-corner:hover {
+    background: rgba(231, 76, 60, 0.8);
+    transform: scale(1.1);
+}
+
+.shovel-corner.selected {
+    background: #c0392b;
+    border-color: #f1c40f;
+    box-shadow: 0 0 15px #f1c40f;
+}
+
+/* 6. BUTTON STYLES (NÚT GỖ) */
+.wood-btn {
+    background: #8b4513;
+    color: #fff;
+    border: 2px solid #5e2f0d;
+    padding: 10px 20px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: 0.2s;
+    box-shadow: 0 4px 0 #3e1e05;
+}
+
+.wood-btn:hover { background: #a0522d; transform: translateY(-2px); }
+.wood-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #3e1e05; }
+
+.small-btn {
+    padding: 5px 15px;
+    font-size: 0.9em;
+    margin-left: 5px;
+    box-shadow: 0 2px 0 #3e1e05;
+}
+
+/* 7. MODALS & POPUPS */
+.modal {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: flex; justify-content: center; align-items: center;
+}
+
+.modal-content, .result-board {
+    background: #fff;
+    color: #333;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    border: 5px solid #8b4513;
+    min-width: 400px;
+}
+
+/* Menu Tạm Dừng */
+.pause-box {
+    background: #34495e;
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    border: 5px solid #2c3e50;
+    min-width: 300px;
+}
+.pause-box h2 { color: #f1c40f; margin-top: 0; margin-bottom: 20px; }
+.menu-buttons { display: flex; flex-direction: column; gap: 15px; }
+.menu-buttons button { width: 100%; }
+
+/* --- FIX LỖI OVERLAY KẾT QUẢ --- */
+#overlay-screen {
+    position: fixed; /* Bắt buộc là fixed để đè lên mọi thứ */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000; /* Z-index cao nhất, cao hơn cả thanh toolbar (900) */
+}
+
+#result-title { font-size: 3em; margin: 0 0 20px; }
+.highlight { font-weight: bold; color: #2980b9; }
+
+/* 8. SẢNH CHỜ (LOBBY) */
+#lobby-screen {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    /* [CẬP NHẬT] Đổi thành sanh.jpg cho nền sảnh */
+    background: url('assets/sanh.jpg') center/cover;
+    z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
+}
+
+.lobby-content {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 40px;
+    border-radius: 20px;
+}
+
+.game-logo {
+    font-family: 'Segoe UI', sans-serif;
+    color: #ffd700;
+    font-size: 4em;
+    text-shadow: 4px 4px 0 #8b4513;
+    margin-bottom: 30px;
+}
+
+.big-start-btn { font-size: 2em; padding: 20px 60px; }
+
+.corner-btn { position: absolute; }
+.top-right { top: 30px; right: 30px; background: #c0392b; }
+.bottom-left { bottom: 30px; left: 30px; }
+.bottom-right { bottom: 30px; right: 30px; }
+
+/* Thêm class định vị góc trái trên */
+.top-left { 
+    top: 30px; 
+    left: 30px; 
+    text-align: left;
+}
+
+/* Trang trí bảng thông tin (Giống tấm bảng gỗ) */
+.wood-board {
+    background: #8b4513;
+    border: 3px solid #5e2f0d;
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+    color: white;
+    font-weight: bold;
+    min-width: 200px;
+}
+
+/* --- SHOP STYLES --- */
+.shop-grid {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.shop-item {
+    background: #ecf0f1;
+    border: 3px solid #7f8c8d;
+    border-radius: 10px;
+    padding: 15px;
+    width: 220px;
+    text-align: center;
+    transition: 0.2s;
+}
+
+.shop-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    border-color: #f1c40f;
+}
+
+.item-icon {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+
+.item-info h3 {
+    margin: 5px 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+}
+
+.item-info p {
+    font-size: 0.9em;
+    color: #555;
+    margin-bottom: 15px;
+    height: 40px; /* Cố định chiều cao dòng mô tả */
+}
+
+.buy-btn {
+    width: 100%;
+    background: #27ae60;
+    font-size: 0.9em;
+}
+
+/* Trạng thái đã mua */
+.shop-item.purchased {
+    border-color: #2ecc71;
+    background: #d5f5e3;
+}
+
+.shop-item.purchased .buy-btn {
+    background: #95a5a6;
+    pointer-events: none;
+}
