@@ -62,6 +62,20 @@
         .wood-btn:hover { background: #a0522d; }
         .wood-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
 
+        /* Style mới cho nút Google */
+        .google-btn {
+            background: #fff;
+            color: #444;
+            border: 2px solid #ddd;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .google-btn:hover { background: #f5f5f5; }
+        .google-btn img { width: 20px; }
+
         .links { margin-top: 20px; font-size: 0.9em; color: #555; }
         .links a { text-decoration: none; color: #d35400; font-weight: bold; }
         .links a:hover { text-decoration: underline; }
@@ -89,6 +103,11 @@
                 <button type="submit" id="btn-submit" class="wood-btn">VÀO GAME</button>
             </form>
 
+            <button id="btn-google" class="wood-btn google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google">
+                Đăng nhập bằng Google
+            </button>
+
             <div class="links">
                 Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
                 <br>
@@ -101,14 +120,28 @@
 
     <script type="module">
         import { auth } from './src/firebase/config.js';
+        import { loginWithGoogle } from './src/firebase/auth.js';
         import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Xử lý đăng nhập bằng Google
+        document.getElementById('btn-google').addEventListener('click', async () => {
+            try {
+                await loginWithGoogle();
+                window.location.href = "index.html";
+            } catch (err) {
+                console.error("Lỗi Google Auth:", err);
+                if (err.code !== 'auth/popup-closed-by-user') {
+                    alert("Đăng nhập Google thất bại!\nLỗi: " + err.message);
+                }
+            }
+        });
 
         document.getElementById('btn-submit').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
             const btn = document.getElementById('btn-submit');
             
-            if (!email || !pass) return; // Nếu trống thì để trình duyệt báo lỗi
+            if (!email || !pass) return; 
 
             const originalText = btn.innerText;
             btn.innerText = "Đang xử lý...";

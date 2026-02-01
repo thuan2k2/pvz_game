@@ -3,7 +3,9 @@ import {
     signInWithEmailAndPassword, 
     signOut, 
     onAuthStateChanged,
-    sendPasswordResetEmail 
+    sendPasswordResetEmail,
+    GoogleAuthProvider, // [MỚI] Thêm Provider cho Google
+    signInWithPopup     // [MỚI] Thêm Popup đăng nhập
 } from "firebase/auth";
 // [CẬP NHẬT] Import thêm functions
 import { auth, db, functions } from "./config.js"; 
@@ -23,6 +25,40 @@ export async function getSystemConfig() {
     } catch (error) {
         console.error("Lỗi lấy config:", error);
         return null;
+    }
+}
+
+/**
+ * Đăng nhập bằng Google
+ */
+export async function loginWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+
+        // Kiểm tra xem user đã tồn tại trong Firestore chưa
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            const config = await getSystemConfig();
+            const starterCoins = config?.economy?.starter_coins || 0;
+
+            // Nếu là người dùng mới, khởi tạo dữ liệu
+            await setDoc(userRef, {
+                email: user.email,
+                phone: user.phoneNumber || "",
+                role: "user",
+                coins: starterCoins,
+                inventory: [],
+                createdAt: new Date()
+            });
+        }
+        return user;
+    } catch (error) {
+        console.error("Lỗi đăng nhập Google:", error);
+        throw error;
     }
 }
 
