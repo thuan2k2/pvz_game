@@ -50,8 +50,8 @@ export async function loginWithGoogle() {
                 phone: user.phoneNumber || "",
                 role: "user",
                 coins: starterCoins,
-                vn_coin: 0, // [MỚI] Khởi tạo VNCoin
-                item_plant_food_count: 0, // [MỚI] Khởi tạo số lượng item đặc biệt
+                vn_coin: 0, 
+                item_plant_food_count: 0,
                 inventory: [],
                 createdAt: new Date()
             });
@@ -248,7 +248,6 @@ export async function buyShopItemWithLog(uid, itemData) {
             const userData = userSnap.data();
             
             // A. XÁC ĐỊNH LOẠI TIỀN CẦN TRỪ
-            // Nếu currency là "Coin" thì trừ coins, mặc định còn lại là trừ vn_coin
             const currencyField = (itemData.currency === "Coin") ? "coins" : "vn_coin";
             const currentBalance = userData[currencyField] || 0;
             const price = parseInt(itemData.price);
@@ -267,15 +266,26 @@ export async function buyShopItemWithLog(uid, itemData) {
 
             // C. XỬ LÝ "GIAO HÀNG" DỰA TRÊN TYPE
             if (itemData.type === 'coin') {
-                // Nếu mua gói Coin -> Cộng Coin vào tài khoản game
-                // itemData.value chứa số lượng coin nhận được
                 updates.coins = increment(parseInt(itemData.value));
             } 
             else if (itemData.type === 'item') {
-                // Nếu mua vật phẩm (ví dụ Plant Food)
                 if (itemData.itemCode === 'plant_food') {
                     // Cộng dồn số lượng vào field riêng
                     updates.item_plant_food_count = increment(parseInt(itemData.amount || 1));
+                } else if (itemData.itemCode === 'sun_pack') {
+                    // [MỚI] Xử lý Gói Mặt Trời (Thời hạn hoặc Vĩnh viễn)
+                    if (itemData.duration && itemData.duration !== 99999) {
+                        // Tính ngày hết hạn
+                        const expireDate = new Date();
+                        expireDate.setDate(expireDate.getDate() + parseInt(itemData.duration));
+                        
+                        // Lưu vào map 'temp_items' (cần import update để set nested field nếu chưa có)
+                        // Tuy nhiên updateDoc hỗ trợ dot notation: "temp_items.sun_pack"
+                        updates[`temp_items.${itemData.itemCode}`] = expireDate;
+                    } else {
+                        // Vĩnh viễn -> Thêm vào inventory
+                        updates.inventory = arrayUnion(itemData.itemCode);
+                    }
                 } else {
                     // Vật phẩm khác (Skin, Cây) -> Thêm vào mảng inventory
                     updates.inventory = arrayUnion(itemData.itemCode);
@@ -327,5 +337,24 @@ export async function getAdminUserDetail(uid) {
     } catch (error) {
         console.error("Lỗi lấy chi tiết Admin:", error);
         return null;
+    }
+}
+
+// --- [MỚI] HÀM TRỪ ITEM KHI SỬ DỤNG TRONG GAME ---
+export async function useGameItem(uid, itemCode) {
+    try {
+        const userRef = doc(db, "users", uid);
+        
+        if (itemCode === 'plant_food') {
+            // Trừ 1 Plant Food
+            await updateDoc(userRef, { 
+                item_plant_food_count: increment(-1) 
+            });
+        }
+        // Có thể thêm logic cho các item tiêu hao khác ở đây (ví dụ boom, ice, etc.)
+        
+        console.log(`Đã dùng 1 ${itemCode} và đồng bộ lên server.`);
+    } catch (error) {
+        console.error("Lỗi đồng bộ item:", error);
     }
 }

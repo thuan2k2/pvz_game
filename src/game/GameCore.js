@@ -12,7 +12,8 @@ import { Projectile } from './classes/Projectile.js';
 import { Sun } from './classes/Sun.js';
 import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
-import { callEndGameReward, getSystemConfig, saveLog } from '../firebase/auth.js';
+// [CẬP NHẬT] Thêm import useGameItem
+import { callEndGameReward, getSystemConfig, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
 
 export class GameCore {
@@ -146,8 +147,6 @@ export class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        // [FIXED] LOGIC SỬ DỤNG VẬT PHẨM TRONG GAME
-        
         // 1. Kiểm tra Gói Mặt Trời (Sun Pack) từ Inventory
         const rawInventory = localStorage.getItem('user_inventory'); 
         const inventory = rawInventory ? JSON.parse(rawInventory) : [];
@@ -308,10 +307,16 @@ export class GameCore {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
                     this.plants[i].activatePower();
-                    this.plantFoodCount--;
-                    // [FIX] Cập nhật lại localStorage để đồng bộ giảm số lượng
-                    localStorage.setItem('item_plant_food_count', this.plantFoodCount);
+                    
+                    // --- [FIX] LOGIC TRỪ ITEM TRÊN SERVER ---
+                    this.plantFoodCount--; // 1. Trừ hiển thị ngay trong game
+                    localStorage.setItem('item_plant_food_count', this.plantFoodCount); // 2. Lưu local
                     this.updatePlantFoodUI();
+                    
+                    // 3. Gọi hàm cập nhật Firebase ngay lập tức
+                    if (auth.currentUser) {
+                        useGameItem(auth.currentUser.uid, 'plant_food');
+                    }
                     
                     this.selectedTool = 'plant';
                     document.getElementById('plant-food-tool').classList.remove('selected');
@@ -351,8 +356,6 @@ export class GameCore {
             
             for (let j = 0; j < this.plants.length; j++) {
                 const p = this.plants[j];
-                // [FIX LỖI CÀO LAN] 
-                // Thêm điều kiện z.y === p.y để đảm bảo zombie chỉ tấn công cây cùng hàng
                 if (z.y === p.y && collision(z, p)) { 
                     z.movement = 0; 
                     p.health -= z.damage; 
@@ -374,19 +377,13 @@ export class GameCore {
                 const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
                 const isZombieInStreet = z.x > GRID_RIGHT_EDGE + 10; 
 
-                // [FIX] Cũng nên đảm bảo đạn chỉ trúng zombie cùng hàng (nếu đạn bay thẳng)
-                // Projectile thường được sinh ra từ cây nên y đã khớp, nhưng kiểm tra thêm cho chắc
                 if (p.y === z.y + 35 && p && collision(p, z) && !isZombieInStreet) { 
-                    // Lưu ý: projectile.y thường là plant.y + 35 (như trong handlePlants), 
-                    // nhưng va chạm collision() đã lo phần hit box. 
-                    // Nếu muốn chắc chắn thì check row, nhưng đạn bay ngang thì collision là đủ.
                     if (collision(p, z)) {
                         z.health -= p.power; 
                         p.delete = true; 
                         break; 
                     }
                 }
-                // Dùng logic cũ cho đạn vì đạn bay nhỏ hơn zombie
                 if (collision(p, z) && !isZombieInStreet) { 
                       z.health -= p.power; 
                       p.delete = true; 
