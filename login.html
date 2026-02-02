@@ -79,7 +79,7 @@
         .links a { text-decoration: none; color: #d35400; font-weight: bold; }
         .links a:hover { text-decoration: underline; }
 
-        /* [MỚI] Modal Style */
+        /* Modal Style */
         .modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; 
@@ -151,24 +151,20 @@
     </div>
 
     <script type="module">
-        import { auth } from './src/firebase/config.js';
-        import { loginWithGoogle, completeUserProfile } from './src/firebase/auth.js';
-        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        // [FIX LỖI DEPLOY] Import trực tiếp từ file nội bộ, KHÔNG dùng link CDN
+        import { loginWithGoogle, completeUserProfile, loginUser } from './src/firebase/auth.js';
 
         let tempUser = null;
 
-        // Xử lý đăng nhập bằng Google (Nâng cấp)
+        // Xử lý đăng nhập bằng Google
         document.getElementById('btn-google').addEventListener('click', async () => {
             try {
-                // Gọi hàm loginWithGoogle đã sửa đổi trong auth.js
                 const result = await loginWithGoogle();
                 
                 if (result.isNewOrIncomplete) {
-                    // Nếu là user mới hoặc chưa hoàn thiện -> Hiện Modal
                     tempUser = result.user;
                     document.getElementById('modal-complete-profile').style.display = 'flex';
                 } else {
-                    // User cũ đã đủ thông tin -> Vào thẳng
                     window.location.href = "index.html";
                 }
             } catch (err) {
@@ -179,7 +175,7 @@
             }
         });
 
-        // Xử lý nút "Lưu & Vào Game" trong Modal
+        // Xử lý hoàn thiện hồ sơ
         document.getElementById('btn-complete-profile').addEventListener('click', async () => {
             const pass = document.getElementById('comp-password').value;
             const phone = document.getElementById('comp-phone').value;
@@ -216,7 +212,7 @@
             }
         });
 
-        // Xử lý đăng nhập thường (Giữ nguyên)
+        // Xử lý đăng nhập thường
         document.getElementById('btn-submit').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
@@ -229,7 +225,8 @@
             btn.disabled = true;
 
             try {
-                await signInWithEmailAndPassword(auth, email, pass);
+                // Sử dụng hàm loginUser từ auth.js thay vì gọi firebase trực tiếp
+                await loginUser(email, pass);
                 window.location.href = "index.html";
             } catch (err) {
                 console.error("Lỗi:", err);
