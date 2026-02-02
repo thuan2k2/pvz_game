@@ -2,7 +2,7 @@ import { auth, db } from './firebase/config.js';
 import { onAuthStateChanged } from "firebase/auth";
 import { 
     collection, getDocs, doc, updateDoc, getDoc, setDoc, 
-    addDoc, deleteDoc, onSnapshot, query, orderBy 
+    addDoc, deleteDoc, onSnapshot, query, orderBy, arrayRemove, increment 
 } from 'firebase/firestore';
 // Import hàm lấy chi tiết và hàm Ghi Log
 import { getAdminUserDetail, saveLog } from './firebase/auth.js';
@@ -20,10 +20,9 @@ onAuthStateChanged(auth, async (user) => {
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists() && userSnap.data().role === 'admin') {
-            // Tải dữ liệu ban đầu
             loadUsers();
             loadSystemConfig(); 
-            loadShopItems(); // [MỚI] Tải danh sách Shop
+            loadShopItems(); 
         } else {
             alert("Bạn không có quyền Admin!");
             window.location.href = 'index.html';
@@ -33,16 +32,11 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// --- [MỚI] CHUYỂN TAB QUẢN LÝ ---
+// CHUYỂN TAB QUẢN LÝ
 window.switchTab = (tabName) => {
-    // Ẩn tất cả section
     document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
-    // Bỏ active tất cả menu
     document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-
-    // Hiện section được chọn
     document.getElementById(`section-${tabName}`).classList.remove('hidden');
-    // Active menu tương ứng (cần set ID bên HTML sau)
     const activeBtn = document.getElementById(`menu-${tabName}`);
     if(activeBtn) activeBtn.classList.add('active');
 };
@@ -56,7 +50,6 @@ async function loadUsers() {
     userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>'; 
 
     try {
-        // Dùng onSnapshot để tự động cập nhật nếu có người nạp tiền
         onSnapshot(collection(db, "users"), (snapshot) => {
             allUsers = [];
             let totalCoins = 0;
@@ -69,10 +62,8 @@ async function loadUsers() {
                 totalVNCoin += (data.vn_coin || 0);
             });
 
-            // Cập nhật thống kê
             document.getElementById('total-users').innerText = allUsers.length;
             document.getElementById('total-coins').innerText = totalCoins.toLocaleString();
-            // Nếu có thẻ hiển thị tổng VNCoin thì gán vào đây
             
             renderTable(allUsers);
         });
@@ -121,10 +112,10 @@ function renderTable(users) {
     });
 }
 
-// --- LOGIC SỬA TIỀN (COIN & VNCOIN) ---
+// LOGIC SỬA TIỀN
 window.openEditModal = (uid, email, currentValue, type) => {
     currentEditingId = uid;
-    currentEditType = type; // 'coins' hoặc 'vn_coin'
+    currentEditType = type; 
     
     document.getElementById('editing-email').innerText = email;
     document.getElementById('edit-currency-name').innerText = type === 'coins' ? 'Coin Game' : 'VNCoin (Nạp)';
@@ -137,21 +128,18 @@ window.saveCoin = async () => {
     if (isNaN(amount) || amount < 0) return alert("Số không hợp lệ");
     
     try {
-        // 1. Lấy dữ liệu cũ để tính biến động
         const userRef = doc(db, "users", currentEditingId);
         const userSnap = await getDoc(userRef);
         const oldVal = userSnap.data()[currentEditType] || 0;
         
-        // 2. Cập nhật tiền mới
         await updateDoc(userRef, { [currentEditType]: amount });
 
-        // 3. Ghi Log hành động của Admin
         const adminUser = auth.currentUser;
         await saveLog(
             currentEditingId, 
             "ADMIN_EDIT", 
             currentEditType === 'coins' ? 'Coin' : 'VNCoin',
-            amount - oldVal, // Số lượng thay đổi (+ hoặc -)
+            amount - oldVal, 
             `Admin ${adminUser.email} chỉnh sửa thủ công`,
             oldVal,
             amount
@@ -165,12 +153,11 @@ window.saveCoin = async () => {
 };
 
 // ============================================================
-// 2. QUẢN LÝ SHOP VIP (REAL-TIME)
+// 2. QUẢN LÝ SHOP VIP
 // ============================================================
 
 function loadShopItems() {
     const listEl = document.getElementById('shop-items-list');
-    // Lắng nghe thay đổi realtime từ collection 'shop_items'
     const q = query(collection(db, "shop_items"), orderBy("price", "asc"));
     
     onSnapshot(q, (snapshot) => {
@@ -206,7 +193,6 @@ window.openShopModal = (item = null) => {
     const title = document.getElementById('shop-modal-title');
     
     if (item) {
-        // Chế độ Sửa
         currentShopItemId = item.id;
         title.innerText = "Sửa sản phẩm";
         document.getElementById('shop-name').value = item.name;
@@ -214,13 +200,12 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-price').value = item.price;
         document.getElementById('shop-image').value = item.image;
         document.getElementById('shop-currency').value = item.currency;
-        document.getElementById('shop-type').value = item.type; // coin/item
+        document.getElementById('shop-type').value = item.type; 
         document.getElementById('shop-value').value = item.type === 'coin' ? item.value : (item.amount || 1);
         document.getElementById('shop-item-code').value = item.itemCode || '';
         document.getElementById('shop-is-hot').checked = item.isHot;
         document.getElementById('shop-category').value = item.shopType || 'vncoin';
     } else {
-        // Chế độ Thêm mới
         currentShopItemId = null;
         title.innerText = "Thêm sản phẩm mới";
         document.getElementById('form-shop-item').reset();
@@ -229,12 +214,12 @@ window.openShopModal = (item = null) => {
     modal.classList.remove('hidden');
 };
 
-// Lưu sản phẩm (Thêm hoặc Update)
+// Lưu sản phẩm
 window.saveShopItem = async () => {
     const name = document.getElementById('shop-name').value;
     const price = parseInt(document.getElementById('shop-price').value);
     const currency = document.getElementById('shop-currency').value;
-    const shopType = document.getElementById('shop-category').value; // vncoin hoặc coin
+    const shopType = document.getElementById('shop-category').value;
     
     const data = {
         name: name,
@@ -245,7 +230,6 @@ window.saveShopItem = async () => {
         shopType: shopType,
         type: document.getElementById('shop-type').value,
         isHot: document.getElementById('shop-is-hot').checked,
-        // Nếu là gói coin thì lấy value, nếu là item thì lấy amount
         value: parseInt(document.getElementById('shop-value').value), 
         amount: parseInt(document.getElementById('shop-value').value),
         itemCode: document.getElementById('shop-item-code').value
@@ -253,11 +237,9 @@ window.saveShopItem = async () => {
 
     try {
         if (currentShopItemId) {
-            // Update
             await updateDoc(doc(db, "shop_items", currentShopItemId), data);
             alert("Đã cập nhật sản phẩm!");
         } else {
-            // Add New
             await addDoc(collection(db, "shop_items"), data);
             alert("Đã thêm sản phẩm mới!");
         }
@@ -268,16 +250,14 @@ window.saveShopItem = async () => {
 };
 
 window.deleteShopItem = async (id, name) => {
-    if(confirm(`Bạn chắc chắn muốn xóa "${name}"? Hành động này không thể hoàn tác.`)) {
+    if(confirm(`Bạn chắc chắn muốn xóa "${name}"?`)) {
         try {
             await deleteDoc(doc(db, "shop_items", id));
-            // Không cần alert vì onSnapshot sẽ tự xóa dòng đó đi
         } catch (e) {
             alert("Lỗi xóa: " + e.message);
         }
     }
 };
-
 
 // ============================================================
 // 3. CẤU HÌNH HỆ THỐNG
@@ -304,7 +284,6 @@ async function loadSystemConfig() {
     }
 }
 
-// Xử lý nút Lưu Thông Báo
 const btnSaveAnnouncement = document.getElementById('btn-save-announcement');
 if (btnSaveAnnouncement) {
     btnSaveAnnouncement.addEventListener('click', async () => {
@@ -319,7 +298,6 @@ if (btnSaveAnnouncement) {
     });
 }
 
-// Xử lý nút Lưu Bảo Trì
 const btnSaveConfig = document.getElementById('btn-save-config');
 if (btnSaveConfig) {
     btnSaveConfig.addEventListener('click', async () => {
@@ -345,13 +323,12 @@ if (btnSaveConfig) {
                 maintenance_message: msg,
                 maintenance_end_time: endTime 
             }, { merge: true });
-            alert(isMaintenance ? `✅ Đã bật bảo trì tới ${endTime.toLocaleTimeString()}` : "✅ Đã tắt bảo trì!");
+            alert(isMaintenance ? `✅ Đã bật bảo trì` : "✅ Đã tắt bảo trì!");
         } catch (error) {
             alert("Lỗi: " + error.message);
         }
     });
 }
-
 
 // ============================================================
 // 4. TIỆN ÍCH CHUNG
@@ -387,6 +364,7 @@ window.unbanUser = async (uid) => {
     }
 };
 
+// [CẬP NHẬT] XEM CHI TIẾT & THU HỒI
 window.showUserDetail = async (uid) => {
     document.getElementById('detailModal').classList.remove('hidden');
     const infoEl = document.getElementById('modal-user-info');
@@ -400,13 +378,44 @@ window.showUserDetail = async (uid) => {
         return;
     }
     const u = data.userData;
+
+    // Render Inventory với nút Thu hồi
+    let invHtml = '';
+    
+    // Thu hồi Plant Food
+    if(u.item_plant_food_count > 0) {
+        invHtml += `
+            <div style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; background:white; padding:5px; border-radius:4px;">
+                <span>🍃 Plant Food: <b>${u.item_plant_food_count}</b></span>
+                <button onclick="revokeItem('${uid}', 'plant_food', 1)" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:2px 8px; cursor:pointer;">-1</button>
+            </div>
+        `;
+    }
+
+    // Thu hồi Item trong mảng
+    if(u.inventory && u.inventory.length > 0) {
+        u.inventory.forEach(code => {
+            invHtml += `
+                <div style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; background:white; padding:5px; border-radius:4px;">
+                    <span>🎁 ${code}</span>
+                    <button onclick="revokeItem('${uid}', 'array_item', '${code}')" style="background:#c0392b; color:white; border:none; border-radius:3px; padding:2px 8px; cursor:pointer;">Thu hồi</button>
+                </div>
+            `;
+        });
+    }
+
+    if(invHtml === '') invHtml = '<em>Không có vật phẩm</em>';
+
     infoEl.innerHTML = `
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <div><strong>Email:</strong> ${u.email}</div>
             <div><strong>Phone:</strong> ${u.phone || '---'}</div>
             <div><strong>Coin Game:</strong> <span style="color:#27ae60">${(u.coins || 0).toLocaleString()}</span></div>
             <div><strong>VNCoin:</strong> <span style="color:#f1c40f">${(u.vn_coin || 0).toLocaleString()}</span></div>
-            <div style="grid-column: 1/-1;"><strong>Kho đồ:</strong> ${u.inventory && u.inventory.length > 0 ? u.inventory.join(', ') : 'Trống'}</div>
+            <div style="grid-column: 1/-1; background:#eee; padding:10px; border-radius:5px;">
+                <strong>🎒 Kho đồ & Thu hồi:</strong><br>
+                <div style="margin-top:5px;">${invHtml}</div>
+            </div>
         </div>
     `;
 
@@ -429,7 +438,29 @@ window.showUserDetail = async (uid) => {
     }
 };
 
-// Tìm kiếm User (Client side filtering)
+// [MỚI] HÀM THU HỒI VẬT PHẨM
+window.revokeItem = async (uid, type, value) => {
+    if(!confirm("Bạn chắc chắn muốn thu hồi vật phẩm này?")) return;
+
+    try {
+        const userRef = doc(db, "users", uid);
+        
+        if (type === 'plant_food') {
+            await updateDoc(userRef, { item_plant_food_count: increment(-1) });
+        } else if (type === 'array_item') {
+            await updateDoc(userRef, { inventory: arrayRemove(value) });
+        }
+
+        const adminUser = auth.currentUser;
+        await saveLog(uid, "ADMIN_REVOKE", "Item", 0, `Admin ${adminUser.email} thu hồi: ${value || 'Plant Food'}`);
+
+        alert("Đã thu hồi thành công!");
+        showUserDetail(uid); 
+    } catch (error) {
+        alert("Lỗi: " + error.message);
+    }
+};
+
 document.getElementById('search-box').addEventListener('input', (e) => {
     const keyword = e.target.value.toLowerCase();
     const filteredUsers = allUsers.filter(u => u.email.toLowerCase().includes(keyword));

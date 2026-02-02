@@ -12,7 +12,6 @@ import { Projectile } from './classes/Projectile.js';
 import { Sun } from './classes/Sun.js';
 import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
-// [CẬP NHẬT] Import thêm saveLog và auth
 import { callEndGameReward, getSystemConfig, saveLog } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
 
@@ -53,7 +52,7 @@ export class GameCore {
         this.skySunInterval = this.getRandomSkySunTime();
 
         // Quản lý số lượng Plant Food
-        this.plantFoodCount = parseInt(localStorage.getItem('item_plant_food_count') || 0);
+        this.plantFoodCount = 0;
 
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseClick = this.handleMouseClick.bind(this);
@@ -101,6 +100,7 @@ export class GameCore {
         const pfBtn = document.getElementById('plant-food-tool');
         if (pfBtn) {
             pfBtn.addEventListener('click', () => {
+                // Cập nhật lại số lượng từ localStorage khi click (phòng trường hợp vừa mua xong)
                 this.plantFoodCount = parseInt(localStorage.getItem('item_plant_food_count') || 0);
                 this.updatePlantFoodUI();
 
@@ -146,12 +146,18 @@ export class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        if (localStorage.getItem('buff_sun_pack')) {
-            this.sun += 50; 
-            localStorage.removeItem('buff_sun_pack');
-            console.log("Đã kích hoạt Gói Nắng Khởi Đầu!");
+        // [FIXED] LOGIC SỬ DỤNG VẬT PHẨM TRONG GAME
+        
+        // 1. Kiểm tra Gói Mặt Trời (Sun Pack) từ Inventory
+        const rawInventory = localStorage.getItem('user_inventory'); 
+        const inventory = rawInventory ? JSON.parse(rawInventory) : [];
+        
+        if (inventory.includes('sun_pack')) {
+            this.sun += 100; // Cộng 100 sun
+            console.log("🌞 Đã kích hoạt Gói Mặt Trời (+100 Sun)");
         }
 
+        // 2. Cập nhật số lượng Plant Food mới nhất
         this.plantFoodCount = parseInt(localStorage.getItem('item_plant_food_count') || 0);
         this.updatePlantFoodUI();
         
@@ -303,8 +309,10 @@ export class GameCore {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
                     this.plants[i].activatePower();
                     this.plantFoodCount--;
+                    // [FIX] Cập nhật lại localStorage để đồng bộ giảm số lượng
                     localStorage.setItem('item_plant_food_count', this.plantFoodCount);
                     this.updatePlantFoodUI();
+                    
                     this.selectedTool = 'plant';
                     document.getElementById('plant-food-tool').classList.remove('selected');
                     return;

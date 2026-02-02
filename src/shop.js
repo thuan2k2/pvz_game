@@ -2,20 +2,21 @@ import { auth, db } from "./firebase/config.js";
 import { onAuthStateChanged } from "firebase/auth";
 import { 
     doc, onSnapshot, collection, query, orderBy, limit, getDocs, where 
-} from "firebase/firestore"; // Thêm các hàm query
+} from "firebase/firestore"; 
 import { buyShopItemWithLog } from "./firebase/auth.js";
 
-// Biến lưu trữ dữ liệu
+// Biến toàn cục
 let SHOP_ITEMS = [];
 let currentUser = null;
-let userData = {}; // Lưu thông tin user realtime
+let userData = {}; 
 
-// === KHỞI TẠO DOM ===
+// DOM Elements
 const vnCoinEl = document.getElementById('user-vncoin');
 const gameCoinEl = document.getElementById('user-coin');
+const gridEl = document.getElementById('shop-grid');
 const loadingEl = document.getElementById('loading');
 
-// 1. Lắng nghe dữ liệu SHOP từ Firestore (Real-time)
+// 1. Lắng nghe dữ liệu SHOP (Real-time)
 const qShop = query(collection(db, "shop_items"), orderBy("price", "asc"));
 onSnapshot(qShop, (snapshot) => {
     SHOP_ITEMS = [];
@@ -23,30 +24,34 @@ onSnapshot(qShop, (snapshot) => {
         SHOP_ITEMS.push({ id: doc.id, ...doc.data() });
     });
     
-    // Nếu đang ở tab nào thì render lại tab đó
-    if(document.getElementById('section-vncoin').classList.contains('active')) renderShopByType('vncoin');
-    if(document.getElementById('section-coin').classList.contains('active')) renderShopByType('coin');
+    // Nếu user đang online, vẽ lại shop ngay khi Admin thêm/sửa đồ
+    if(currentUser) {
+        const activeTab = document.querySelector('.shop-section.active');
+        if(activeTab && activeTab.id === 'section-vncoin') renderShopByType('vncoin');
+        if(activeTab && activeTab.id === 'section-coin') renderShopByType('coin');
+    }
 });
 
-// 2. Kiểm tra đăng nhập & Lắng nghe tiền/kho đồ User
+// 2. Lắng nghe User Realtime (QUAN TRỌNG: FIX LỖI NÚT MUA)
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
         onSnapshot(doc(db, "users", user.uid), (doc) => {
             if (doc.exists()) {
-                userData = doc.data(); // Cập nhật data mới nhất
+                userData = doc.data(); // Cập nhật data mới nhất từ Firebase
                 
                 // Cập nhật số dư trên Header
                 vnCoinEl.innerText = (userData.vn_coin || 0).toLocaleString();
                 gameCoinEl.innerText = (userData.coins || 0).toLocaleString();
                 
-                // Nếu đang ở tab kho đồ thì render lại ngay lập tức
-                if(document.getElementById('section-inventory').classList.contains('active')) {
-                    renderInventory();
-                }
-                
-                // Mặc định load shop nếu chưa load
-                if(!document.querySelector('.shop-section.active')) {
+                // [FIX] Vẽ lại màn hình hiện tại ngay lập tức để nút Mua cập nhật trạng thái
+                const activeTab = document.querySelector('.shop-section.active');
+                if(activeTab) {
+                    if (activeTab.id === 'section-vncoin') renderShopByType('vncoin');
+                    else if (activeTab.id === 'section-coin') renderShopByType('coin');
+                    else if (activeTab.id === 'section-inventory') renderInventory();
+                } else {
+                    // Mặc định lần đầu vào shop
                     renderShopByType('vncoin');
                 }
             }
@@ -56,7 +61,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 3. Render Giao diện Shop (VNCoin / Coin)
+// 3. Render Shop (Logic check tiền chuẩn xác)
 window.renderShopByType = function(type) {
     const gridEl = document.getElementById(`grid-${type}`);
     gridEl.innerHTML = "";
@@ -64,13 +69,14 @@ window.renderShopByType = function(type) {
     const filteredItems = SHOP_ITEMS.filter(item => item.shopType === type);
     
     if (filteredItems.length === 0) {
-        gridEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #7f8c8d;">Chưa có vật phẩm nào.</div>';
+        gridEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #7f8c8d;">Đang cập nhật...</div>';
         return;
     }
 
     filteredItems.forEach(item => {
-        const balance = item.currency === "VNCoin" ? (userData.vn_coin || 0) : (userData.coins || 0);
-        const canBuy = balance >= item.price;
+        // [FIX] Lấy số dư realtime từ biến userData
+        const userBalance = item.currency === "VNCoin" ? (userData.vn_coin || 0) : (userData.coins || 0);
+        const canBuy = userBalance >= parseInt(item.price);
         
         // Xử lý ảnh
         const imgUrl = (item.image && item.image.includes('assets/')) ? item.image : 'assets/sun.png'; 
@@ -78,6 +84,11 @@ window.renderShopByType = function(type) {
         const card = document.createElement('div');
         card.className = "product-card";
         
+        // Nút mua sẽ bị mờ và không bấm được nếu không đủ tiền
+        const btnStyle = canBuy ? '' : 'background:#7f8c8d; cursor:not-allowed; opacity:0.7;';
+        const btnText = canBuy ? 'MUA NGAY' : 'KHÔNG ĐỦ TIỀN';
+        const btnAttr = canBuy ? '' : 'disabled';
+
         card.innerHTML = `
             ${item.isHot ? '<span class="badge-hot">HOT</span>' : ''}
             <div class="product-img">
@@ -92,8 +103,8 @@ window.renderShopByType = function(type) {
                     <div class="price-tag">${parseInt(item.price).toLocaleString()} ${item.currency}</div>
                     <button class="btn-buy" 
                         onclick="handleBuy('${item.id}')" 
-                        ${canBuy ? '' : 'disabled'}>
-                        ${canBuy ? 'MUA NGAY' : 'KHÔNG ĐỦ TIỀN'}
+                        style="${btnStyle}" ${btnAttr}>
+                        ${btnText}
                     </button>
                 </div>
             </div>
@@ -102,18 +113,17 @@ window.renderShopByType = function(type) {
     });
 }
 
-// 4. [MỚI] Render Kho Đồ (Inventory)
+// 4. Render Kho Đồ (Inventory)
 window.renderInventory = function() {
     const container = document.getElementById('inventory-container');
     container.innerHTML = "";
-
     let hasItem = false;
 
-    // A. Hiển thị Plant Food (Item tiêu hao)
+    // A. Plant Food (Số lượng)
     const plantFoodCount = userData.item_plant_food_count || 0;
     if (plantFoodCount > 0) {
         hasItem = true;
-        const pfHtml = `
+        container.innerHTML += `
             <div class="inventory-item">
                 <div style="display:flex; align-items:center;">
                     <div class="inv-icon">🍃</div>
@@ -125,20 +135,25 @@ window.renderInventory = function() {
                 <div class="inv-count">x${plantFoodCount}</div>
             </div>
         `;
-        container.innerHTML += pfHtml;
     }
 
-    // B. Hiển thị Item vĩnh viễn (Skin, Cây mới)
+    // B. Các Item Gói/Vĩnh viễn (Mảng)
     if (userData.inventory && userData.inventory.length > 0) {
         userData.inventory.forEach(code => {
             hasItem = true;
+            let itemName = "Vật phẩm";
+            let itemDesc = "Đã sở hữu";
+            let icon = "🎁";
+
+            if(code === 'sun_pack') { itemName = "Gói Mặt Trời"; itemDesc = "+100 Sun khi bắt đầu game"; icon = "☀️"; }
+            
             container.innerHTML += `
                 <div class="inventory-item" style="border-left-color: #9b59b6;">
                     <div style="display:flex; align-items:center;">
-                        <div class="inv-icon">🎁</div>
+                        <div class="inv-icon">${icon}</div>
                         <div>
-                            <div style="font-weight:bold; font-size:1.2em;">Vật Phẩm: ${code}</div>
-                            <div style="color:#bdc3c7; font-size:0.9em;">Đã sở hữu vĩnh viễn</div>
+                            <div style="font-weight:bold; font-size:1.2em;">${itemName} (${code})</div>
+                            <div style="color:#bdc3c7; font-size:0.9em;">${itemDesc}</div>
                         </div>
                     </div>
                     <div class="inv-count">✔</div>
@@ -147,18 +162,15 @@ window.renderInventory = function() {
         });
     }
 
-    if (!hasItem) {
-        container.innerHTML = '<div style="text-align:center; padding:50px; color:#7f8c8d;">Túi đồ trống rỗng... Hãy mua sắm đi!</div>';
-    }
+    if (!hasItem) container.innerHTML = '<div style="text-align:center; padding:50px; color:#7f8c8d;">Túi đồ trống.</div>';
 }
 
-// 5. [MỚI] Render Lịch sử mua hàng
+// 5. Render Lịch Sử
 window.renderHistory = async function() {
     const tbody = document.getElementById('history-body');
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải dữ liệu...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải...</td></tr>';
 
     try {
-        // Lấy 20 giao dịch mua hàng gần nhất của user này
         const q = query(
             collection(db, "transactions_history"),
             where("uid", "==", currentUser.uid),
@@ -171,7 +183,7 @@ window.renderHistory = async function() {
         tbody.innerHTML = "";
 
         if(snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Chưa có giao dịch nào.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Chưa có giao dịch.</td></tr>';
             return;
         }
 
@@ -179,8 +191,6 @@ window.renderHistory = async function() {
             const data = doc.data();
             const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
             const priceColor = data.assetType === 'VNCoin' ? '#f1c40f' : '#2ecc71';
-            
-            // Xử lý tên sản phẩm từ ghi chú
             const itemName = data.note.replace('Mua: ', '').replace('Mua vật phẩm: ', '');
 
             tbody.innerHTML += `
@@ -192,33 +202,26 @@ window.renderHistory = async function() {
             `;
         });
     } catch (error) {
-        console.error("Lỗi tải lịch sử:", error);
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red; padding:20px;">Lỗi tải dữ liệu. Vui lòng thử lại sau.</td></tr>';
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:red;">Cần tạo Index trên Firestore để xem lịch sử.</td></tr>';
     }
 }
 
 // 6. Xử lý Mua Hàng
 window.handleBuy = async (itemId) => {
     if (!currentUser) return;
-    
     const item = SHOP_ITEMS.find(i => i.id === itemId);
     if (!item) return;
 
-    if (!confirm(`Bạn có chắc muốn mua "${item.name}" với giá ${parseInt(item.price).toLocaleString()} ${item.currency}?`)) return;
+    if (!confirm(`Xác nhận mua "${item.name}"?`)) return;
 
     loadingEl.style.display = 'flex';
-
-    // Gọi hàm xử lý giao dịch an toàn trong auth.js
     const result = await buyShopItemWithLog(currentUser.uid, item);
-
     loadingEl.style.display = 'none';
 
     if (result.success) {
-        alert("✅ Mua thành công! Hãy kiểm tra Kho Đồ.");
-        // Chuyển ngay sang tab Kho đồ để người chơi thấy hàng về
-        // (Nếu muốn giữ ở trang shop thì bỏ dòng dưới đi)
-        // switchSection('inventory', document.querySelectorAll('.sidebar-item')[2]); 
+        alert("✅ Mua thành công! Kiểm tra Kho Đồ.");
     } else {
-        alert("❌ Giao dịch thất bại: " + result.message);
+        alert("❌ Lỗi: " + result.message);
     }
 };
