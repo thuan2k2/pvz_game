@@ -62,7 +62,6 @@
         .wood-btn:hover { background: #a0522d; }
         .wood-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
 
-        /* Style mới cho nút Google */
         .google-btn {
             background: #fff;
             color: #444;
@@ -79,6 +78,20 @@
         .links { margin-top: 20px; font-size: 0.9em; color: #555; }
         .links a { text-decoration: none; color: #d35400; font-weight: bold; }
         .links a:hover { text-decoration: underline; }
+
+        /* [MỚI] Modal Style */
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; 
+            z-index: 100; 
+        }
+        .modal-content { 
+            background: white; padding: 30px; border-radius: 10px; width: 380px; 
+            text-align: center; border: 3px solid #e67e22; 
+        }
+        .modal h3 { color: #e67e22; margin-bottom: 10px; }
+        .modal p { font-size: 0.9em; color: #555; margin-bottom: 20px; }
+        .error-msg { color: red; font-size: 0.9em; margin-bottom: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -118,16 +131,46 @@
         </div>
     </div>
 
+    <div id="modal-complete-profile" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ CẬP NHẬT THÔNG TIN</h3>
+            <p>Để bảo mật tài khoản và đăng nhập bằng Email sau này, vui lòng bổ sung thông tin.</p>
+            <div id="complete-error" class="error-msg"></div>
+            
+            <div class="input-group">
+                <label>Tạo mật khẩu đăng nhập:</label>
+                <input type="password" id="comp-password" placeholder="Nhập mật khẩu mới...">
+            </div>
+            <div class="input-group">
+                <label>Số điện thoại bảo mật:</label>
+                <input type="text" id="comp-phone" placeholder="Nhập SĐT của bạn...">
+            </div>
+            
+            <button class="wood-btn" id="btn-complete-profile">Lưu & Vào Game</button>
+        </div>
+    </div>
+
     <script type="module">
         import { auth } from './src/firebase/config.js';
-        import { loginWithGoogle } from './src/firebase/auth.js';
+        import { loginWithGoogle, completeUserProfile } from './src/firebase/auth.js';
         import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-        // Xử lý đăng nhập bằng Google
+        let tempUser = null;
+
+        // Xử lý đăng nhập bằng Google (Nâng cấp)
         document.getElementById('btn-google').addEventListener('click', async () => {
             try {
-                await loginWithGoogle();
-                window.location.href = "index.html";
+                // Gọi hàm loginWithGoogle đã sửa đổi trong auth.js
+                const result = await loginWithGoogle();
+                
+                if (result.isNewOrIncomplete) {
+                    // Nếu là user mới hoặc chưa hoàn thiện -> Hiện Modal
+                    tempUser = result.user;
+                    document.getElementById('modal-complete-profile').style.display = 'flex';
+                } else {
+                    // User cũ đã đủ thông tin -> Vào thẳng
+                    window.location.href = "index.html";
+                }
             } catch (err) {
                 console.error("Lỗi Google Auth:", err);
                 if (err.code !== 'auth/popup-closed-by-user') {
@@ -136,6 +179,44 @@
             }
         });
 
+        // Xử lý nút "Lưu & Vào Game" trong Modal
+        document.getElementById('btn-complete-profile').addEventListener('click', async () => {
+            const pass = document.getElementById('comp-password').value;
+            const phone = document.getElementById('comp-phone').value;
+            const errorEl = document.getElementById('complete-error');
+            const btn = document.getElementById('btn-complete-profile');
+
+            if (pass.length < 6) {
+                errorEl.innerText = "Mật khẩu phải từ 6 ký tự trở lên!";
+                errorEl.style.display = 'block';
+                return;
+            }
+            if (!phone || phone.trim() === "") {
+                errorEl.innerText = "Vui lòng nhập số điện thoại!";
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            btn.innerText = "Đang lưu...";
+            btn.disabled = true;
+            errorEl.style.display = 'none';
+
+            try {
+                if (tempUser) {
+                    await completeUserProfile(tempUser, pass, phone);
+                    alert("Cập nhật thành công! Đang vào game...");
+                    window.location.href = "index.html";
+                }
+            } catch (err) {
+                console.error(err);
+                errorEl.innerText = "Lỗi cập nhật: " + err.message;
+                errorEl.style.display = 'block';
+                btn.innerText = "Lưu & Vào Game";
+                btn.disabled = false;
+            }
+        });
+
+        // Xử lý đăng nhập thường (Giữ nguyên)
         document.getElementById('btn-submit').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
