@@ -5,33 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PvZ</title>
     <style>
+        /* 1. RESET CSS QUAN TRỌNG */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #ecf0f1; display: block; }
-        .sidebar { width: 260px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; top: 0; left: 0; z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-        .sidebar h2 { color: #f1c40f; text-align: center; margin-bottom: 40px; font-size: 1.8em; text-transform: uppercase; border-bottom: 2px solid #34495e; padding-bottom: 20px; }
-        .menu-item { display: block; padding: 15px 20px; color: #ecf0f1; text-decoration: none; border-radius: 6px; margin-bottom: 10px; transition: 0.3s; font-weight: 500; cursor: pointer; }
+        
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #ecf0f1; 
+            display: block; 
+        }
+        
+        /* 2. SIDEBAR */
+        .sidebar { 
+            width: 260px; 
+            background: #2c3e50; 
+            color: white; 
+            height: 100vh; 
+            padding: 20px; 
+            position: fixed; 
+            top: 0; left: 0;
+            z-index: 100; 
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h2 { 
+            color: #f1c40f; 
+            text-align: center; margin-bottom: 40px; font-size: 1.8em;
+            text-transform: uppercase; letter-spacing: 1px;
+            border-bottom: 2px solid #34495e; padding-bottom: 20px;
+        }
+
+        .menu-item { 
+            display: block; padding: 15px 20px; 
+            color: #ecf0f1; text-decoration: none; 
+            border-radius: 6px; margin-bottom: 10px;
+            transition: 0.3s; font-weight: 500; cursor: pointer;
+        }
         .menu-item:hover { background: #34495e; transform: translateX(5px); }
         .menu-item.active { background: #e67e22; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .menu-item.back-btn { margin-top: 50px; background: #c0392b; text-align: center; font-weight: bold; border: 1px solid #a93226; }
+        .menu-item.back-btn:hover { background: #e74c3c; transform: none; }
+
+        /* 3. MAIN CONTENT */
         .main-content { margin-left: 260px; padding: 40px; width: calc(100% - 260px); }
+        
         .admin-section { display: block; animation: fadeIn 0.3s; }
         .admin-section.hidden { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* Header & Stats */
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 40px; background: white; padding: 20px;
+            border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
         .header h1 { margin: 0; color: #2c3e50; font-size: 1.5em; }
         .search-input { padding: 12px 20px; width: 350px; border: 1px solid #ddd; border-radius: 30px; outline: none; background: #f9f9f9; }
+        
         .stats-cards { display: flex; gap: 30px; margin-bottom: 40px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex: 1; text-align: center; border-left: 5px solid #3498db; }
         .card:last-child { border-left-color: #27ae60; }
+
+        /* Table */
         .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 40px; }
         .admin-table { width: 100%; border-collapse: collapse; }
         .admin-table th, .admin-table td { padding: 20px; text-align: left; border-bottom: 1px solid #ecf0f1; }
-        .admin-table th { background: #34495e; color: white; }
+        .admin-table th { background: #34495e; color: white; text-transform: uppercase; font-size: 0.85em; }
+
+        /* Config */
         .config-container { background: white; border-radius: 12px; padding: 30px; margin-bottom: 40px; }
         .config-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
+
+        /* Buttons */
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-weight: 500; }
         .btn-edit { background: #f39c12; }
         .btn-ban { background: #e74c3c; } 
@@ -39,18 +86,25 @@
         .btn-view { background: #3498db; }
         .badge-banned { background: #e74c3c; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
         .badge-active { background: #2ecc71; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
-        
-        /* Modal Style */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(3px); }
+
+        /* MODAL */
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; 
+            z-index: 2000; backdrop-filter: blur(3px); 
+        }
         .hidden { display: none !important; }
-        .modal-box { background: white; padding: 40px; border-radius: 12px; width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-box { 
+            background: white; padding: 40px; border-radius: 12px; width: 450px; text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; 
+        }
         .modal-large .modal-box { width: 80%; max-width: 900px; text-align: left; padding: 30px; }
         .modal-box h3 { margin-top: 0; color: #2c3e50; font-size: 1.5em; margin-bottom: 20px; }
         .modal-box input, .modal-box select, .modal-box textarea { width: 100%; padding: 12px; margin: 10px 0 25px; border: 2px solid #eee; border-radius: 8px; outline: none; }
         .modal-actions { display: flex; gap: 15px; justify-content: center; }
         .modal-actions button { flex: 1; padding: 12px; font-size: 1em; }
         
-        /* [QUAN TRỌNG] Class để Modal Sửa Item nổi lên trên Modal Chi Tiết */
+        /* Modal Overlay Priority */
         .modal-overlay-top { z-index: 3000 !important; }
     </style>
 </head>
@@ -105,8 +159,35 @@
                 </div>
                 <div class="config-section">
                     <h3>🔧 Bảo trì</h3>
-                    <select id="maintenance-mode" class="form-control" style="margin-bottom:10px;"><option value="false">Tắt</option><option value="true">Bật</option></select>
-                    <input type="text" id="maintenance-msg" class="form-control" placeholder="Lời nhắn...">
+                    <div class="form-group">
+                        <label>Trạng thái:</label>
+                        <select id="maintenance-mode" class="form-control">
+                            <option value="false">🔴 Tắt (Server mở)</option>
+                            <option value="true">🟢 Bật (Đóng Server)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Thời gian bảo trì:</label>
+                        <select id="maintenance-duration" class="form-control" onchange="toggleCustomDate()">
+                            <option value="0">Ngay lập tức (Không đếm ngược)</option>
+                            <option value="5">5 Phút</option>
+                            <option value="15">15 Phút</option>
+                            <option value="30">30 Phút</option>
+                            <option value="60">60 Phút</option>
+                            <option value="custom">📅 Chọn giờ cụ thể...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="custom-date-group" style="display: none;">
+                        <label>Kết thúc lúc:</label>
+                        <input type="datetime-local" id="maintenance-custom-date" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lời nhắn:</label>
+                        <input type="text" id="maintenance-msg" class="form-control" placeholder="Ví dụ: Server đang bảo trì nâng cấp...">
+                    </div>
                     <button id="btn-save-config" class="btn" style="background: #e67e22; width: 100%; margin-top:10px;">Lưu Cấu Hình</button>
                 </div>
             </div>

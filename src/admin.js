@@ -4,7 +4,6 @@ import {
     collection, getDocs, doc, updateDoc, getDoc, setDoc, 
     addDoc, deleteDoc, onSnapshot, query, orderBy, arrayRemove, arrayUnion, increment, deleteField 
 } from 'firebase/firestore';
-// Import hàm lấy chi tiết và hàm Ghi Log
 import { getAdminUserDetail, saveLog } from './firebase/auth.js';
 
 let allUsers = []; 
@@ -15,8 +14,8 @@ let currentShopItemId = null;
 
 // Biến cho sửa Item User
 let editingUserUid = null;
-let editingItemKey = null; // 'plant_food' hoặc 'sun_pack'
-let editingItemType = null; // 'quantity' hoặc 'duration'
+let editingItemKey = null; 
+let editingItemType = null; 
 
 // ============================================================
 // 0. CÁC HÀM HỆ THỐNG & CONFIG (ĐẶT LÊN ĐẦU ĐỂ TRÁNH LỖI)
@@ -33,8 +32,12 @@ async function loadSystemConfig() {
             
             const maintMode = document.getElementById('maintenance-mode');
             const maintMsg = document.getElementById('maintenance-msg');
+            const maintDuration = document.getElementById('maintenance-duration'); // [FIX] Đã có trong HTML
+            
             if (maintMode) maintMode.value = data.maintenance ? "true" : "false";
             if (maintMsg) maintMsg.value = data.maintenance_message || "";
+            // Reset duration về 0 khi load
+            if (maintDuration) maintDuration.value = "0";
             
             const annContent = document.getElementById('announcement-content');
             if (annContent) annContent.value = data.announcement || "";
@@ -69,7 +72,6 @@ onAuthStateChanged(auth, async (user) => {
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists() && userSnap.data().role === 'admin') {
-            // Gọi các hàm load dữ liệu
             await loadSystemConfig(); // Load config trước
             loadUsers();
             loadShopItems(); 
@@ -156,11 +158,9 @@ function renderTable(users) {
     });
 }
 
-// LOGIC SỬA TIỀN
 window.openEditModal = (uid, email, currentValue, type) => {
     currentEditingId = uid;
     currentEditType = type; 
-    
     document.getElementById('editing-email').innerText = email;
     document.getElementById('edit-currency-name').innerText = type === 'coins' ? 'Coin Game' : 'VNCoin (Nạp)';
     document.getElementById('new-coin-input').value = currentValue;
@@ -175,25 +175,14 @@ window.saveCoin = async () => {
         const userRef = doc(db, "users", currentEditingId);
         const userSnap = await getDoc(userRef);
         const oldVal = userSnap.data()[currentEditType] || 0;
-        
         await updateDoc(userRef, { [currentEditType]: amount });
-
+        
         const adminUser = auth.currentUser;
-        await saveLog(
-            currentEditingId, 
-            "ADMIN_EDIT", 
-            currentEditType === 'coins' ? 'Coin' : 'VNCoin',
-            amount - oldVal, 
-            `Admin ${adminUser.email} chỉnh sửa thủ công`,
-            oldVal,
-            amount
-        );
-
+        await saveLog(currentEditingId, "ADMIN_EDIT", currentEditType === 'coins' ? 'Coin' : 'VNCoin', amount - oldVal, `Admin ${adminUser.email} chỉnh sửa thủ công`, oldVal, amount);
+        
         alert("Cập nhật thành công!");
         closeModal('modal-edit-coin');
-    } catch (error) {
-        alert("Lỗi: " + error.message);
-    }
+    } catch (error) { alert("Lỗi: " + error.message); }
 };
 
 // ============================================================
@@ -203,7 +192,6 @@ window.saveCoin = async () => {
 function loadShopItems() {
     const listEl = document.getElementById('shop-items-list');
     if(!listEl) return;
-
     const q = query(collection(db, "shop_items"), orderBy("price", "asc"));
     
     onSnapshot(q, (snapshot) => {
@@ -212,11 +200,9 @@ function loadShopItems() {
             listEl.innerHTML = '<tr><td colspan="7" style="text-align:center;">Chưa có sản phẩm nào. Hãy thêm mới!</td></tr>';
             return;
         }
-
         snapshot.forEach(doc => {
             const item = doc.data();
             let detailHtml = '';
-            
             if(item.itemCode === 'sun_pack') {
                 const days = item.duration === 99999 ? "Vĩnh viễn" : `${item.duration} Ngày`;
                 detailHtml = `<span style="color:#e67e22">⏳ ${days}</span>`;
@@ -225,7 +211,6 @@ function loadShopItems() {
             } else {
                 detailHtml = `<span>💰 ${item.value} Coin</span>`;
             }
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><img src="${item.image}" style="width:40px; height:40px; object-fit:contain;"></td>
@@ -266,16 +251,12 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-is-hot').checked = item.isHot;
         
         const codeInput = document.getElementById('shop-item-code');
-        if(item.itemCode === 'sun_pack') {
-             codeInput.dispatchEvent(new Event('change'));
-        }
-        
+        if(item.itemCode === 'sun_pack') codeInput.dispatchEvent(new Event('change'));
     } else {
         currentShopItemId = null;
         document.getElementById('shop-modal-title').innerText = "Thêm sản phẩm";
         document.getElementById('form-shop-item').reset();
     }
-    
     modal.classList.remove('hidden');
 };
 
@@ -313,23 +294,15 @@ window.saveShopItem = async () => {
             alert("Đã thêm sản phẩm mới!");
         }
         closeModal('modal-shop-item');
-    } catch (e) {
-        alert("Lỗi: " + e.message);
-    }
+    } catch (e) { alert("Lỗi: " + e.message); }
 };
 
 window.deleteShopItem = async (id, name) => {
-    if(confirm(`Bạn chắc chắn muốn xóa "${name}"?`)) {
-        try {
-            await deleteDoc(doc(db, "shop_items", id));
-        } catch (e) {
-            alert("Lỗi xóa: " + e.message);
-        }
-    }
+    if(confirm(`Xóa "${name}"?`)) try { await deleteDoc(doc(db, "shop_items", id)); } catch(e) { alert(e.message); }
 };
 
 // ============================================================
-// [CẬP NHẬT] CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ NÂNG CAO
+// CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ
 // ============================================================
 
 window.showUserDetail = async (uid) => {
@@ -348,10 +321,8 @@ window.showUserDetail = async (uid) => {
     }
     const u = data.userData;
 
-    // --- RENDER KHO ĐỒ ---
     let invHtml = '';
 
-    // 1. Plant Food (Số lượng - Có nút Sửa)
     if (u.item_plant_food_count !== undefined) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #2ecc71;">
@@ -359,15 +330,11 @@ window.showUserDetail = async (uid) => {
                     <strong>🍃 Thuốc Tăng Lực</strong><br>
                     <span style="color:#7f8c8d; font-size:0.9em;">Số lượng: <b>${u.item_plant_food_count}</b></span>
                 </div>
-                <button class="btn btn-edit" style="font-size:0.8em;" 
-                    onclick="openEditUserItem('${uid}', 'plant_food', 'quantity', ${u.item_plant_food_count})">
-                    ✏️ Sửa
-                </button>
+                <button class="btn btn-edit" style="font-size:0.8em;" onclick="openEditUserItem('${uid}', 'plant_food', 'quantity', ${u.item_plant_food_count})">✏️ Sửa</button>
             </div>
         `;
     }
 
-    // 2. Sun Pack (Gói Mặt Trời)
     if (u.inventory && u.inventory.includes('sun_pack')) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #f1c40f;">
@@ -375,10 +342,7 @@ window.showUserDetail = async (uid) => {
                     <strong>☀️ Gói Mặt Trời (Vĩnh viễn)</strong><br>
                     <span style="color:#7f8c8d; font-size:0.9em;">Đang kích hoạt</span>
                 </div>
-                <button class="btn btn-edit" style="font-size:0.8em;" 
-                    onclick="openEditUserItem('${uid}', 'sun_pack', 'duration', 'permanent')">
-                    ⚙️ Chỉnh sửa
-                </button>
+                <button class="btn btn-edit" style="font-size:0.8em;" onclick="openEditUserItem('${uid}', 'sun_pack', 'duration', 'permanent')">⚙️ Chỉnh sửa</button>
             </div>
         `;
     } 
@@ -394,10 +358,7 @@ window.showUserDetail = async (uid) => {
                     <strong>☀️ Gói Mặt Trời (${isExpired ? 'Hết hạn' : 'Có hạn'})</strong><br>
                     <span style="color:#7f8c8d; font-size:0.9em;">Hết hạn: ${expireTime.toLocaleDateString()} (${timeLeft} ngày)</span>
                 </div>
-                <button class="btn btn-edit" style="font-size:0.8em;" 
-                    onclick="openEditUserItem('${uid}', 'sun_pack', 'duration', '${expireTime.getTime()}')">
-                    ⚙️ Gia hạn/Xóa
-                </button>
+                <button class="btn btn-edit" style="font-size:0.8em;" onclick="openEditUserItem('${uid}', 'sun_pack', 'duration', '${expireTime.getTime()}')">⚙️ Gia hạn/Xóa</button>
             </div>
         `;
     }
@@ -424,15 +385,15 @@ window.showUserDetail = async (uid) => {
     }
 };
 
-// [FIX] MỞ MODAL SỬA ITEM USER (Kiểm tra modal tồn tại)
 window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     editingUserUid = uid;
     editingItemKey = itemKey;
     editingItemType = type;
 
     const modal = document.getElementById('modal-edit-player-item');
+    // [FIX: Kiểm tra modal tồn tại]
     if (!modal) {
-        alert("Lỗi: Không tìm thấy modal sửa item! Hãy chắc chắn bạn đã cập nhật file admin.html.");
+        alert("Lỗi: Không tìm thấy modal sửa item! Hãy tải lại trang hoặc kiểm tra file admin.html.");
         return;
     }
 
@@ -455,16 +416,12 @@ window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     }
 };
 
-// XỬ LÝ NÚT LƯU TRONG MODAL USER ITEM
 window.submitEditUserItem = async () => {
     const userRef = doc(db, "users", editingUserUid);
-    const adminUser = auth.currentUser;
-
     try {
         if (editingItemType === 'quantity') {
             const newQty = parseInt(document.getElementById('edit-item-qty').value);
             if (isNaN(newQty) || newQty < 0) return alert("Số lượng không hợp lệ!");
-
             await updateDoc(userRef, { item_plant_food_count: newQty });
             await saveLog(editingUserUid, "ADMIN_EDIT", "Item", 0, `Admin chỉnh Plant Food thành: ${newQty}`);
         } 
@@ -514,6 +471,7 @@ window.submitEditUserItem = async () => {
     }
 };
 
+// [FIX] CẤU HÌNH HỆ THỐNG
 const btnSaveAnnouncement = document.getElementById('btn-save-announcement');
 if (btnSaveAnnouncement) {
     btnSaveAnnouncement.addEventListener('click', async () => {
@@ -531,7 +489,10 @@ if (btnSaveConfig) {
     btnSaveConfig.addEventListener('click', async () => {
         const isMaintenance = document.getElementById('maintenance-mode').value === "true";
         const msg = document.getElementById('maintenance-msg').value;
-        const duration = document.getElementById('maintenance-duration').value;
+        // [FIX] Lấy giá trị từ select maintenance-duration đã có trong HTML
+        const durationSelect = document.getElementById('maintenance-duration');
+        const duration = durationSelect ? durationSelect.value : "0"; 
+        
         let endTime = null;
 
         if (isMaintenance) {
@@ -556,7 +517,6 @@ if (btnSaveConfig) {
     });
 }
 
-// 4. TIỆN ÍCH CHUNG
 window.openBanModal = (uid, email) => {
     currentBanId = uid;
     document.getElementById('ban-email').innerText = email;
