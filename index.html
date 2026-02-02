@@ -7,15 +7,14 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <title>Plants vs. Zombies - Clone Edition</title>
-    <meta name="title" content="Plants vs. Zombies - Clone Edition">
-    <meta name="description" content="Trải nghiệm trò chơi PvZ phiên bản Web với hệ thống tài khoản và lưu trữ đám mây. Khám phá ngay!">
+    <meta name="title" content="Plants vs. Zombies Online">
+    <meta name="description" content="Trải nghiệm ngay trò chơi PvZ phiên bản Web chưa chính thức. Khám phá lẹ!">
 
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://plans-game.vercel.app/">
     <meta property="og:title" content="Plants vs. Zombies Online">
     <meta property="og:description" content="Trải nghiệm ngay trò chơi PvZ phiên bản Web chưa chính thức. Khám phá lẹ!">
-    <meta property="og:image" content="https://plans-game.vercel.app/assets/bg.jpg">
+    <meta property="og:image" content="https://plans-game.vercel.app/favicon.png">
 
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://plans-game.vercel.app/">
@@ -153,7 +152,10 @@
         <button id="btn-lobby-logout" class="wood-btn corner-btn top-right hidden">🚪 Đăng xuất</button>
 
         <button id="btn-tutorial" class="wood-btn corner-btn bottom-left">📖 Hướng dẫn</button>
-        <button id="btn-shop" class="wood-btn corner-btn bottom-right">🛒 Cửa hàng</button>
+        
+        <a href="shop.html" id="btn-shop-link" class="wood-btn corner-btn bottom-right" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">
+            🛒 SHOP VIP
+        </a>
 
         <div class="lobby-content">
             <h1 class="game-logo">PLANTS vs. ZOMBIES <br><small>Clone Edition</small></h1>
@@ -210,24 +212,10 @@
     </div>
 
     <div id="modal-shop" class="modal hidden">
-        <div class="modal-content" style="min-width: 600px;">
-            <h2 style="color: #e67e22; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 20px;">CỬA HÀNG DAVE</h2>
-            <p style="margin-bottom: 20px;">Số dư hiện tại: <b id="shop-coin" style="color: #f1c40f; font-size: 1.5em; text-shadow: 1px 1px 0 #000;">0</b> Coin</p>
-            <div class="shop-grid">
-                <div class="shop-item" id="item-sun-pack">
-                    <div class="item-icon">☀️</div>
-                    <div class="item-info"><h3>Nắng Khởi Đầu</h3><p>Bắt đầu game với +50 Sun.</p><button class="wood-btn buy-btn" onclick="buyItem('sun_pack', 200)">Mua 200 💰</button></div>
-                </div>
-                <div class="shop-item" id="item-plant-food">
-                    <div class="item-icon">🍃</div>
-                    <div class="item-info"><h3>Thuốc Tăng Lực x1</h3><p>Kích hoạt kỹ năng tối thượng.</p><button class="wood-btn buy-btn" onclick="buyItem('plant_food', 500)">Mua 500 💰</button></div>
-                </div>
-                <div class="shop-item locked">
-                    <div class="item-icon">🔒</div>
-                    <div class="item-info"><h3>Xẻng Vàng</h3><p>Sắp ra mắt...</p><button class="wood-btn" disabled style="background: gray; cursor: not-allowed;">???</button></div>
-                </div>
-            </div>
-            <button class="wood-btn" onclick="closeModal('modal-shop')" style="margin-top: 20px; background: #c0392b;">Đóng</button>
+        <div class="modal-content">
+            <h2>CỬA HÀNG NHANH</h2>
+            <p>Vui lòng truy cập <a href="shop.html">Shop Chính Thức</a> để mua nhiều vật phẩm hơn.</p>
+            <button class="wood-btn" onclick="closeModal('modal-shop')">Đóng</button>
         </div>
     </div>
 

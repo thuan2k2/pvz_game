@@ -1,6 +1,8 @@
 import { auth, db } from './firebase/config.js';
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs, doc, updateDoc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
+// [MỚI] Import hàm lấy chi tiết User và Log từ auth.js
+import { getAdminUserDetail } from './firebase/auth.js';
 
 let allUsers = []; 
 let currentEditingId = null;
@@ -49,7 +51,8 @@ async function loadSystemConfig() {
 // 2. Tải danh sách User
 async function loadUsers() {
     const userListEl = document.getElementById('user-list');
-    userListEl.innerHTML = '<tr><td colspan="5" style="text-align:center;">Đang tải...</td></tr>';
+    // colspan=6 vì thêm cột VNCoin
+    userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>'; 
 
     try {
         const querySnapshot = await getDocs(collection(db, "users"));
@@ -68,7 +71,7 @@ async function loadUsers() {
         renderTable(allUsers);
     } catch (error) {
         console.error(error);
-        userListEl.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Lỗi tải dữ liệu (Kiểm tra Rules)</td></tr>';
+        userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Lỗi tải dữ liệu (Kiểm tra Rules)</td></tr>';
     }
 }
 
@@ -78,7 +81,7 @@ function renderTable(users) {
     userListEl.innerHTML = '';
 
     if (users.length === 0) {
-        userListEl.innerHTML = '<tr><td colspan="5" style="text-align:center;">Không tìm thấy user nào</td></tr>';
+        userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy user nào</td></tr>';
         return;
     }
 
@@ -95,14 +98,18 @@ function renderTable(users) {
             actionBtn = `<button class="btn btn-unban" onclick="unbanUser('${user.id}')">🔓 Gỡ cấm</button>`;
         }
 
+        // [MỚI] Nút xem chi tiết
+        const detailBtn = `<button class="btn btn-view" onclick="showUserDetail('${user.id}')">📜 Chi tiết</button>`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${user.email}</td>
             <td>${user.phone || '---'}</td>
             <td style="font-weight:bold; color:#f39c12;">${(user.coins || 0).toLocaleString()}</td>
-            <td>${statusHtml}</td>
-            <td>
+            <td style="font-weight:bold; color:#f1c40f;">${(user.vn_coin || 0).toLocaleString()}</td> <td>${statusHtml}</td>
+            <td style="display:flex;">
                 <button class="btn btn-edit" onclick="openEditModal('${user.id}', '${user.email}', ${user.coins || 0})">Sửa Coin</button>
+                ${detailBtn}
                 ${user.role !== 'admin' ? actionBtn : ''} 
             </td>
         `;
@@ -127,7 +134,7 @@ if (btnSaveAnnouncement) {
     });
 }
 
-// [CẬP NHẬT] Xử lý nút Lưu Bảo Trì
+// Xử lý nút Lưu Bảo Trì
 const btnSaveConfig = document.getElementById('btn-save-config');
 if (btnSaveConfig) {
     btnSaveConfig.addEventListener('click', async () => {
@@ -160,7 +167,7 @@ if (btnSaveConfig) {
             await setDoc(docRef, { 
                 maintenance: isMaintenance,
                 maintenance_message: msg,
-                maintenance_end_time: endTime // Lưu timestamp khi server sẽ đóng
+                maintenance_end_time: endTime 
             }, { merge: true });
             
             let alertMsg = isMaintenance ? "✅ Đã bật bảo trì! Server sẽ đóng lúc: " + endTime.toLocaleTimeString() : "✅ Đã tắt bảo trì!";
@@ -212,6 +219,61 @@ window.unbanUser = async (uid) => {
         }
     }
 };
+
+// --- [MỚI] LOGIC XEM CHI TIẾT & LỊCH SỬ ---
+window.showUserDetail = async (uid) => {
+    // Hiển thị modal
+    document.getElementById('detailModal').classList.remove('hidden');
+
+    const infoEl = document.getElementById('modal-user-info');
+    const tbody = document.getElementById('modal-logs-body');
+
+    infoEl.innerHTML = "Đang tải dữ liệu...";
+    tbody.innerHTML = "";
+
+    // Gọi hàm từ firebase/auth.js
+    const data = await getAdminUserDetail(uid);
+
+    if (!data || !data.userData) {
+        infoEl.innerHTML = "<span style='color:red'>Không tìm thấy dữ liệu user!</span>";
+        return;
+    }
+
+    const u = data.userData;
+    // Hiển thị thông tin tổng quan
+    infoEl.innerHTML = `
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div><strong>Email:</strong> ${u.email}</div>
+            <div><strong>Phone:</strong> ${u.phone || '---'}</div>
+            <div><strong>Coin Game:</strong> <span style="color:#27ae60">${(u.coins || 0).toLocaleString()}</span></div>
+            <div><strong>VNCoin:</strong> <span style="color:#f1c40f">${(u.vn_coin || 0).toLocaleString()}</span></div>
+            <div style="grid-column: 1/-1;"><strong>Kho đồ:</strong> ${u.inventory && u.inventory.length > 0 ? u.inventory.join(', ') : 'Trống'}</div>
+        </div>
+    `;
+
+    // Render Logs (Lịch sử giao dịch)
+    if (data.logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Chưa có giao dịch nào</td></tr>';
+    } else {
+        data.logs.forEach(log => {
+            const date = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
+            const isPositive = log.amount >= 0;
+            const color = isPositive ? '#27ae60' : '#c0392b';
+            const sign = isPositive ? '+' : '';
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${date}</td>
+                    <td>${log.type}</td>
+                    <td>${log.assetType}</td>
+                    <td style="color:${color}; font-weight:bold;">${sign}${log.amount.toLocaleString()}</td>
+                    <td>${log.note}</td>
+                </tr>
+            `;
+        });
+    }
+};
+
 
 // --- CÁC LOGIC CŨ ---
 document.getElementById('search-box').addEventListener('input', (e) => {

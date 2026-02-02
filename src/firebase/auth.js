@@ -214,3 +214,100 @@ export async function verifyAndResetPassword(email, phone) {
         throw error;
     }
 }
+
+// --- [BỔ SUNG] Import cần thiết cho Transaction và Query ---
+import { 
+    runTransaction, addDoc, serverTimestamp, 
+    orderBy, limit 
+} from "firebase/firestore";
+
+// --- 1. HÀM GHI LOG HỆ THỐNG (Dùng chung cho cả Game và Shop) ---
+export async function saveLog(uid, actionType, assetType, amount, note, oldBalance = 0, newBalance = 0) {
+    try {
+        await addDoc(collection(db, "transactions_history"), {
+            uid: uid,
+            type: actionType, // DEPOSIT, BUY_SHOP, GAME_REWARD...
+            assetType: assetType, // VNCoin, Coin, Item
+            amount: amount,
+            note: note,
+            balanceBefore: oldBalance,
+            balanceAfter: newBalance,
+            timestamp: serverTimestamp()
+        });
+        console.log("Đã ghi log:", note);
+    } catch (error) {
+        console.error("Lỗi ghi log:", error);
+    }
+}
+
+// --- 2. HÀM MUA ĐỒ SHOP (Trừ VNCoin, Cộng đồ, Ghi Log) ---
+export async function buyShopItemWithLog(uid, itemData) {
+    const userRef = doc(db, "users", uid);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const userSnap = await transaction.get(userRef);
+            if (!userSnap.exists()) throw "User không tồn tại!";
+
+            const userData = userSnap.data();
+            const currentVNCoin = userData.vn_coin || 0;
+
+            // Kiểm tra tiền
+            if (currentVNCoin < itemData.price) {
+                throw "Số dư VNCoin không đủ!";
+            }
+
+            const newVNCoin = currentVNCoin - itemData.price;
+
+            // Cập nhật User: Trừ tiền, Thêm đồ
+            transaction.update(userRef, {
+                vn_coin: newVNCoin,
+                // Logic cộng item vào kho (dùng arrayUnion nếu là item, increment nếu là coin game)
+                // Ở đây ví dụ cộng item string code
+                inventory: arrayUnion(itemData.code) 
+            });
+
+            // Ghi Log ngay trong Transaction (để đảm bảo đồng bộ)
+            const logRef = doc(collection(db, "transactions_history"));
+            transaction.set(logRef, {
+                uid: uid,
+                type: "BUY_SHOP",
+                assetType: "VNCoin",
+                amount: -itemData.price,
+                balanceBefore: currentVNCoin,
+                balanceAfter: newVNCoin,
+                note: `Mua vật phẩm: ${itemData.name}`,
+                timestamp: serverTimestamp()
+            });
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Giao dịch lỗi:", error);
+        return { success: false, message: error.toString() };
+    }
+}
+
+// --- 3. HÀM ADMIN: LẤY CHI TIẾT USER & LOGS ---
+export async function getAdminUserDetail(uid) {
+    try {
+        // Lấy Info
+        const userSnap = await getDoc(doc(db, "users", uid));
+        const userData = userSnap.exists() ? userSnap.data() : null;
+
+        // Lấy Logs (50 giao dịch gần nhất)
+        const q = query(
+            collection(db, "transactions_history"), 
+            where("uid", "==", uid),
+            orderBy("timestamp", "desc"),
+            limit(50)
+        );
+        const logsSnap = await getDocs(q);
+        const logs = logsSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+        return { userData, logs };
+    } catch (error) {
+        console.error("Lỗi lấy chi tiết Admin:", error);
+        return null;
+    }
+}

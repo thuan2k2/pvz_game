@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cửa Hàng Vật Phẩm - PvZ</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #1a1a1a; 
+            color: white; 
+        }
+
+        /* HEADER */
+        .shop-header {
+            background: #2c3e50;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .back-btn {
+            color: #ecf0f1;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .back-btn:hover { color: #f1c40f; }
+
+        .currency-display {
+            display: flex;
+            gap: 20px;
+        }
+
+        .coin-box {
+            background: rgba(0,0,0,0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #444;
+        }
+        
+        .vn-coin { color: #f1c40f; border-color: #f39c12; }
+        .game-coin { color: #2ecc71; border-color: #27ae60; }
+
+        .btn-deposit {
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #922b21;
+            transition: 0.1s;
+        }
+        .btn-deposit:active { transform: translateY(4px); box-shadow: none; }
+
+        /* MAIN CONTENT */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h1.shop-title {
+            text-align: center;
+            color: #f1c40f;
+            text-transform: uppercase;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+        }
+
+        .shop-subtitle {
+            text-align: center;
+            color: #bdc3c7;
+            margin-bottom: 40px;
+        }
+
+        /* GRID SẢN PHẨM */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .product-card {
+            background: #252525;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #333;
+            transition: 0.3s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            border-color: #f1c40f;
+            box-shadow: 0 5px 20px rgba(241, 196, 15, 0.2);
+        }
+
+        .badge-hot {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e74c3c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .product-img {
+            width: 100%;
+            height: 180px;
+            background: #333; /* Placeholder màu xám nếu chưa có ảnh */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 3em;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 20px;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .product-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .product-desc {
+            color: #95a5a6;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        .price-tag {
+            font-size: 1.3em;
+            color: #f1c40f;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .btn-buy {
+            width: 100%;
+            padding: 12px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1em;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-buy:hover { background: #2ecc71; }
+        .btn-buy:disabled { background: #7f8c8d; cursor: not-allowed; }
+
+        /* LOADING & MODAL */
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000;
+            color: white; font-size: 1.5em;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading" class="loading-overlay">Đang xử lý giao dịch...</div>
+
+    <div class="shop-header">
+        <a href="index.html" class="back-btn">← Về Sảnh Game</a>
+        
+        <div class="currency-display">
+            <div class="coin-box vn-coin">
+                <span>🟡 VNCoin:</span>
+                <span id="user-vncoin">...</span>
+            </div>
+            <div class="coin-box game-coin">
+                <span>💵 Game Coin:</span>
+                <span id="user-coin">...</span>
+            </div>
+            <button class="btn-deposit" onclick="alert('Vui lòng liên hệ Admin để nạp qua SePay!')">NẠP TIỀN</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 class="shop-title">Cửa Hàng Vật Phẩm</h1>
+        <p class="shop-subtitle">Dùng VNCoin để mua các gói hỗ trợ và vật phẩm đặc biệt</p>
+
+        <div id="shop-grid" class="shop-grid">
+            <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
+                Đang tải danh sách vật phẩm...
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="./src/shop.js"></script>
+</body>
+</html>
