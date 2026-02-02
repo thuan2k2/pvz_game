@@ -5,80 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - PvZ</title>
     <style>
-        /* 1. RESET CSS QUAN TRỌNG */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: #ecf0f1; 
-            display: block; 
-        }
-        
-        /* 2. SIDEBAR */
-        .sidebar { 
-            width: 260px; 
-            background: #2c3e50; 
-            color: white; 
-            height: 100vh; 
-            padding: 20px; 
-            position: fixed; 
-            top: 0; left: 0;
-            z-index: 100; 
-            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-        }
-
-        .sidebar h2 { 
-            color: #f1c40f; 
-            text-align: center; margin-bottom: 40px; font-size: 1.8em;
-            text-transform: uppercase; letter-spacing: 1px;
-            border-bottom: 2px solid #34495e; padding-bottom: 20px;
-        }
-
-        .menu-item { 
-            display: block; padding: 15px 20px; 
-            color: #ecf0f1; text-decoration: none; 
-            border-radius: 6px; margin-bottom: 10px;
-            transition: 0.3s; font-weight: 500; cursor: pointer;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #ecf0f1; display: block; }
+        .sidebar { width: 260px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; top: 0; left: 0; z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar h2 { color: #f1c40f; text-align: center; margin-bottom: 40px; font-size: 1.8em; text-transform: uppercase; border-bottom: 2px solid #34495e; padding-bottom: 20px; }
+        .menu-item { display: block; padding: 15px 20px; color: #ecf0f1; text-decoration: none; border-radius: 6px; margin-bottom: 10px; transition: 0.3s; font-weight: 500; cursor: pointer; }
         .menu-item:hover { background: #34495e; transform: translateX(5px); }
         .menu-item.active { background: #e67e22; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .menu-item.back-btn { margin-top: 50px; background: #c0392b; text-align: center; font-weight: bold; border: 1px solid #a93226; }
-        .menu-item.back-btn:hover { background: #e74c3c; transform: none; }
-
-        /* 3. MAIN CONTENT */
         .main-content { margin-left: 260px; padding: 40px; width: calc(100% - 260px); }
-        
         .admin-section { display: block; animation: fadeIn 0.3s; }
         .admin-section.hidden { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Header & Stats */
-        .header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 40px; background: white; padding: 20px;
-            border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .header h1 { margin: 0; color: #2c3e50; font-size: 1.5em; }
         .search-input { padding: 12px 20px; width: 350px; border: 1px solid #ddd; border-radius: 30px; outline: none; background: #f9f9f9; }
-        
         .stats-cards { display: flex; gap: 30px; margin-bottom: 40px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex: 1; text-align: center; border-left: 5px solid #3498db; }
         .card:last-child { border-left-color: #27ae60; }
-
-        /* Table */
         .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 40px; }
         .admin-table { width: 100%; border-collapse: collapse; }
         .admin-table th, .admin-table td { padding: 20px; text-align: left; border-bottom: 1px solid #ecf0f1; }
-        .admin-table th { background: #34495e; color: white; text-transform: uppercase; font-size: 0.85em; }
-
-        /* Config */
+        .admin-table th { background: #34495e; color: white; }
         .config-container { background: white; border-radius: 12px; padding: 30px; margin-bottom: 40px; }
         .config-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 1em; }
-
-        /* Buttons */
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
         .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; color: white; margin-right: 5px; font-weight: 500; }
         .btn-edit { background: #f39c12; }
         .btn-ban { background: #e74c3c; } 
@@ -86,23 +39,19 @@
         .btn-view { background: #3498db; }
         .badge-banned { background: #e74c3c; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
         .badge-active { background: #2ecc71; color: white; padding: 5px 10px; border-radius: 20px; font-size: 0.8em; }
-
-        /* MODAL */
-        .modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; 
-            z-index: 2000; backdrop-filter: blur(3px); 
-        }
+        
+        /* Modal Style */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; backdrop-filter: blur(3px); }
         .hidden { display: none !important; }
-        .modal-box { 
-            background: white; padding: 40px; border-radius: 12px; width: 450px; text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; 
-        }
+        .modal-box { background: white; padding: 40px; border-radius: 12px; width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
         .modal-large .modal-box { width: 80%; max-width: 900px; text-align: left; padding: 30px; }
         .modal-box h3 { margin-top: 0; color: #2c3e50; font-size: 1.5em; margin-bottom: 20px; }
         .modal-box input, .modal-box select, .modal-box textarea { width: 100%; padding: 12px; margin: 10px 0 25px; border: 2px solid #eee; border-radius: 8px; outline: none; }
         .modal-actions { display: flex; gap: 15px; justify-content: center; }
         .modal-actions button { flex: 1; padding: 12px; font-size: 1em; }
+        
+        /* [QUAN TRỌNG] Class để Modal Sửa Item nổi lên trên Modal Chi Tiết */
+        .modal-overlay-top { z-index: 3000 !important; }
     </style>
 </head>
 <body>
@@ -140,7 +89,7 @@
             </div>
             <div class="table-container">
                 <table class="admin-table">
-                    <thead><tr><th>Ảnh</th><th>Tên</th><th>Loại tiền</th><th>Giá</th><th>Loại</th><th>Hot</th><th>Hành động</th></tr></thead>
+                    <thead><tr><th>Ảnh</th><th>Tên</th><th>Loại tiền</th><th>Giá</th><th>Loại</th><th>Chi tiết</th><th>Hành động</th></tr></thead>
                     <tbody id="shop-items-list"><tr><td colspan="7" style="text-align:center;">Đang tải...</td></tr></tbody>
                 </table>
             </div>
@@ -209,17 +158,25 @@
 
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1">
-                        <label>Giá trị/SL:</label>
-                        <input type="number" id="shop-value" class="form-control" placeholder="5000 hoặc 10">
+                        <label id="shop-value-label">Giá trị/SL:</label>
+                        <input type="number" id="shop-value" class="form-control" placeholder="5000 hoặc 1">
+                        <select id="shop-duration" class="form-control hidden">
+                            <option value="99999">Vĩnh viễn</option>
+                            <option value="1">1 Ngày</option>
+                            <option value="3">3 Ngày</option>
+                            <option value="7">7 Ngày</option>
+                            <option value="14">14 Ngày</option>
+                            <option value="30">30 Ngày</option>
+                        </select>
                     </div>
                     
                     <div class="form-group" style="flex:1">
                         <label>Chọn Vật Phẩm:</label>
-                        <select id="shop-item-code" class="form-control">
-                            <option value="">-- Không (Gói tiền) --</option>
+                        <select id="shop-item-code" class="form-control" onchange="checkItemType()">
+                            <option value="">-- Không --</option>
                             <option value="plant_food">🍃 Thuốc Tăng Lực</option>
                             <option value="sun_pack">☀️ Gói Nắng (+50)</option>
-                            </select>
+                        </select>
                     </div>
                 </div>
 
@@ -230,6 +187,36 @@
                     <button type="button" class="btn" style="background:#95a5a6;" onclick="closeModal('modal-shop-item')">Hủy</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="modal-edit-player-item" class="modal hidden modal-overlay-top">
+        <div class="modal-box">
+            <h3 id="edit-item-title">Chỉnh sửa vật phẩm</h3>
+            <p style="margin-bottom:10px;">Đang sửa: <b id="edit-item-name" style="color:#e67e22">...</b></p>
+            
+            <div id="edit-qty-group" class="hidden">
+                <label>Nhập số lượng mới:</label>
+                <input type="number" id="edit-item-qty" class="form-control">
+            </div>
+
+            <div id="edit-duration-group" class="hidden">
+                <label>Chọn hạn sử dụng mới:</label>
+                <select id="edit-item-duration-select" class="form-control" onchange="toggleCustomDuration()">
+                    <option value="remove">🗑️ XÓA VẬT PHẨM NÀY</option>
+                    <option value="permanent">♾️ Vĩnh viễn</option>
+                    <option value="1">📅 Thêm 1 Ngày</option>
+                    <option value="3">📅 Thêm 3 Ngày</option>
+                    <option value="7">📅 Thêm 7 Ngày</option>
+                    <option value="custom">✍️ Nhập số ngày cụ thể...</option>
+                </select>
+                <input type="number" id="edit-item-custom-days" class="form-control hidden" placeholder="Nhập số ngày (Ví dụ: 5)" style="margin-top:10px;">
+            </div>
+
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="btn btn-edit" onclick="submitEditUserItem()">Cập nhật ngay</button>
+                <button class="btn" onclick="closeModal('modal-edit-player-item')" style="background: #95a5a6;">Hủy</button>
+            </div>
         </div>
     </div>
 
@@ -269,10 +256,34 @@
             if(type === 'coin') {
                 codeInput.value = "";
                 codeInput.disabled = true;
+                checkItemType();
             } else {
                 codeInput.disabled = false;
                 codeInput.value = "plant_food"; 
+                checkItemType();
             }
+        }
+        function checkItemType() {
+            const code = document.getElementById('shop-item-code').value;
+            const valInput = document.getElementById('shop-value');
+            const durInput = document.getElementById('shop-duration');
+            const label = document.getElementById('shop-value-label');
+
+            if (code === 'sun_pack') {
+                valInput.classList.add('hidden');
+                durInput.classList.remove('hidden');
+                label.innerText = "Thời hạn gói:";
+            } else {
+                valInput.classList.remove('hidden');
+                durInput.classList.add('hidden');
+                label.innerText = "Giá trị / Số lượng:";
+            }
+        }
+        function toggleCustomDuration() {
+            const val = document.getElementById('edit-item-duration-select').value;
+            const customInput = document.getElementById('edit-item-custom-days');
+            if (val === 'custom') customInput.classList.remove('hidden');
+            else customInput.classList.add('hidden');
         }
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
     </script>

@@ -19,10 +19,10 @@ let editingItemKey = null; // 'plant_food' hoặc 'sun_pack'
 let editingItemType = null; // 'quantity' hoặc 'duration'
 
 // ============================================================
-// 0. KHỞI TẠO VÀ LOAD CẤU HÌNH
+// 0. CÁC HÀM HỆ THỐNG & CONFIG (ĐẶT LÊN ĐẦU ĐỂ TRÁNH LỖI)
 // ============================================================
 
-// Định nghĩa hàm loadSystemConfig trước để tránh lỗi not defined
+// Load cấu hình hệ thống
 async function loadSystemConfig() {
     try {
         const docRef = doc(db, "system_config", "general");
@@ -44,15 +44,34 @@ async function loadSystemConfig() {
     }
 }
 
-// Check quyền Admin
+// Chuyển Tab
+window.switchTab = (tabName) => {
+    document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`section-${tabName}`).classList.remove('hidden');
+    const activeBtn = document.getElementById(`menu-${tabName}`);
+    if(activeBtn) activeBtn.classList.add('active');
+};
+
+// Đóng Modal
+window.closeModal = (id) => {
+    const el = document.getElementById(id);
+    if(el) el.classList.add('hidden');
+    currentEditingId = null;
+    currentBanId = null;
+    currentShopItemId = null;
+};
+
+// 1. Check quyền Admin & Khởi chạy
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists() && userSnap.data().role === 'admin') {
+            // Gọi các hàm load dữ liệu
+            await loadSystemConfig(); // Load config trước
             loadUsers();
-            loadSystemConfig(); 
             loadShopItems(); 
         } else {
             alert("Bạn không có quyền Admin!");
@@ -63,22 +82,13 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// Chuyển Tab
-window.switchTab = (tabName) => {
-    document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
-    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-    document.getElementById(`section-${tabName}`).classList.remove('hidden');
-    const activeBtn = document.getElementById(`menu-${tabName}`);
-    if(activeBtn) activeBtn.classList.add('active');
-};
-
 // ============================================================
-// 1. QUẢN LÝ NGƯỜI CHƠI (USER)
+// 2. QUẢN LÝ NGƯỜI CHƠI (USER)
 // ============================================================
 
 async function loadUsers() {
     const userListEl = document.getElementById('user-list');
-    userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>'; 
+    if(userListEl) userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>'; 
 
     try {
         onSnapshot(collection(db, "users"), (snapshot) => {
@@ -93,19 +103,22 @@ async function loadUsers() {
                 totalVNCoin += (data.vn_coin || 0);
             });
 
-            document.getElementById('total-users').innerText = allUsers.length;
-            document.getElementById('total-coins').innerText = totalCoins.toLocaleString();
+            const totalUsersEl = document.getElementById('total-users');
+            const totalCoinsEl = document.getElementById('total-coins');
+            if(totalUsersEl) totalUsersEl.innerText = allUsers.length;
+            if(totalCoinsEl) totalCoinsEl.innerText = totalCoins.toLocaleString();
             
             renderTable(allUsers);
         });
     } catch (error) {
         console.error(error);
-        userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Lỗi tải dữ liệu</td></tr>';
+        if(userListEl) userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Lỗi tải dữ liệu</td></tr>';
     }
 }
 
 function renderTable(users) {
     const userListEl = document.getElementById('user-list');
+    if(!userListEl) return;
     userListEl.innerHTML = '';
 
     if (users.length === 0) {
@@ -184,11 +197,13 @@ window.saveCoin = async () => {
 };
 
 // ============================================================
-// 2. QUẢN LÝ SHOP VIP
+// 3. QUẢN LÝ SHOP VIP
 // ============================================================
 
 function loadShopItems() {
     const listEl = document.getElementById('shop-items-list');
+    if(!listEl) return;
+
     const q = query(collection(db, "shop_items"), orderBy("price", "asc"));
     
     onSnapshot(q, (snapshot) => {
@@ -231,7 +246,6 @@ function loadShopItems() {
 
 window.openShopModal = (item = null) => {
     const modal = document.getElementById('modal-shop-item');
-    
     if (item) {
         currentShopItemId = item.id;
         document.getElementById('shop-modal-title').innerText = "Sửa sản phẩm";
@@ -240,7 +254,7 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-price').value = item.price;
         document.getElementById('shop-image').value = item.image;
         document.getElementById('shop-currency').value = item.currency;
-        document.getElementById('shop-type').value = item.type; 
+        document.getElementById('shop-type').value = item.type;
         document.getElementById('shop-item-code').value = item.itemCode || '';
         document.getElementById('shop-category').value = item.shopType || 'vncoin';
         
@@ -251,7 +265,6 @@ window.openShopModal = (item = null) => {
         }
         document.getElementById('shop-is-hot').checked = item.isHot;
         
-        // Trigger UI update
         const codeInput = document.getElementById('shop-item-code');
         if(item.itemCode === 'sun_pack') {
              codeInput.dispatchEvent(new Event('change'));
@@ -316,27 +329,29 @@ window.deleteShopItem = async (id, name) => {
 };
 
 // ============================================================
-// [CẬP NHẬT] CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ
+// [CẬP NHẬT] CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ NÂNG CAO
 // ============================================================
 
 window.showUserDetail = async (uid) => {
-    document.getElementById('detailModal').classList.remove('hidden');
+    const modalDetail = document.getElementById('detailModal');
+    if(modalDetail) modalDetail.classList.remove('hidden');
+    
     const infoEl = document.getElementById('modal-user-info');
     const tbody = document.getElementById('modal-logs-body');
-    infoEl.innerHTML = "Đang tải...";
-    tbody.innerHTML = "";
+    if(infoEl) infoEl.innerHTML = "Đang tải...";
+    if(tbody) tbody.innerHTML = "";
 
     const data = await getAdminUserDetail(uid);
     if (!data || !data.userData) {
-        infoEl.innerHTML = "<span style='color:red'>Không tìm thấy user!</span>";
+        if(infoEl) infoEl.innerHTML = "<span style='color:red'>Không tìm thấy user!</span>";
         return;
     }
     const u = data.userData;
 
-    // Render Inventory
+    // --- RENDER KHO ĐỒ ---
     let invHtml = '';
 
-    // 1. Plant Food
+    // 1. Plant Food (Số lượng - Có nút Sửa)
     if (u.item_plant_food_count !== undefined) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #2ecc71;">
@@ -352,7 +367,7 @@ window.showUserDetail = async (uid) => {
         `;
     }
 
-    // 2. Sun Pack
+    // 2. Sun Pack (Gói Mặt Trời)
     if (u.inventory && u.inventory.includes('sun_pack')) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #f1c40f;">
@@ -400,8 +415,7 @@ window.showUserDetail = async (uid) => {
         </div>
     `;
 
-    // Render Logs
-    if (data.logs.length > 0) {
+    if (data.logs.length > 0 && tbody) {
         data.logs.forEach(log => {
             const date = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
             const color = log.amount >= 0 ? '#27ae60' : '#c0392b';
@@ -410,15 +424,13 @@ window.showUserDetail = async (uid) => {
     }
 };
 
-// MỞ MODAL SỬA ITEM
+// [FIX] MỞ MODAL SỬA ITEM USER (Kiểm tra modal tồn tại)
 window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     editingUserUid = uid;
     editingItemKey = itemKey;
     editingItemType = type;
 
     const modal = document.getElementById('modal-edit-player-item');
-    
-    // Kiểm tra modal có tồn tại không
     if (!modal) {
         alert("Lỗi: Không tìm thấy modal sửa item! Hãy chắc chắn bạn đã cập nhật file admin.html.");
         return;
@@ -443,7 +455,7 @@ window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     }
 };
 
-// XỬ LÝ NÚT LƯU
+// XỬ LÝ NÚT LƯU TRONG MODAL USER ITEM
 window.submitEditUserItem = async () => {
     const userRef = doc(db, "users", editingUserUid);
     const adminUser = auth.currentUser;
@@ -502,7 +514,6 @@ window.submitEditUserItem = async () => {
     }
 };
 
-// Cấu hình hệ thống (Nút Save)
 const btnSaveAnnouncement = document.getElementById('btn-save-announcement');
 if (btnSaveAnnouncement) {
     btnSaveAnnouncement.addEventListener('click', async () => {
@@ -572,15 +583,11 @@ window.unbanUser = async (uid) => {
     }
 };
 
-document.getElementById('search-box').addEventListener('input', (e) => {
-    const keyword = e.target.value.toLowerCase();
-    const filteredUsers = allUsers.filter(u => u.email.toLowerCase().includes(keyword));
-    renderTable(filteredUsers);
-});
-
-window.closeModal = (id) => {
-    document.getElementById(id).classList.add('hidden');
-    currentEditingId = null;
-    currentBanId = null;
-    currentShopItemId = null;
-};
+const searchBox = document.getElementById('search-box');
+if(searchBox) {
+    searchBox.addEventListener('input', (e) => {
+        const keyword = e.target.value.toLowerCase();
+        const filteredUsers = allUsers.filter(u => u.email.toLowerCase().includes(keyword));
+        renderTable(filteredUsers);
+    });
+}
