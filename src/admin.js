@@ -2,8 +2,9 @@ import { auth, db } from './firebase/config.js';
 import { onAuthStateChanged } from "firebase/auth";
 import { 
     collection, getDocs, doc, updateDoc, getDoc, setDoc, 
-    addDoc, deleteDoc, onSnapshot, query, orderBy, arrayRemove, arrayUnion, increment 
+    addDoc, deleteDoc, onSnapshot, query, orderBy, arrayRemove, arrayUnion, increment, deleteField 
 } from 'firebase/firestore';
+// Import hàm lấy chi tiết và hàm Ghi Log
 import { getAdminUserDetail, saveLog } from './firebase/auth.js';
 
 let allUsers = []; 
@@ -17,11 +18,38 @@ let editingUserUid = null;
 let editingItemKey = null; // 'plant_food' hoặc 'sun_pack'
 let editingItemType = null; // 'quantity' hoặc 'duration'
 
-// 1. Check quyền Admin
+// ============================================================
+// 0. KHỞI TẠO VÀ LOAD CẤU HÌNH
+// ============================================================
+
+// Định nghĩa hàm loadSystemConfig trước để tránh lỗi not defined
+async function loadSystemConfig() {
+    try {
+        const docRef = doc(db, "system_config", "general");
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            const maintMode = document.getElementById('maintenance-mode');
+            const maintMsg = document.getElementById('maintenance-msg');
+            if (maintMode) maintMode.value = data.maintenance ? "true" : "false";
+            if (maintMsg) maintMsg.value = data.maintenance_message || "";
+            
+            const annContent = document.getElementById('announcement-content');
+            if (annContent) annContent.value = data.announcement || "";
+        }
+    } catch (error) {
+        console.error("Lỗi tải config:", error);
+    }
+}
+
+// Check quyền Admin
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
+        
         if (userSnap.exists() && userSnap.data().role === 'admin') {
             loadUsers();
             loadSystemConfig(); 
@@ -35,6 +63,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
+// Chuyển Tab
 window.switchTab = (tabName) => {
     document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
@@ -43,47 +72,69 @@ window.switchTab = (tabName) => {
     if(activeBtn) activeBtn.classList.add('active');
 };
 
-// ... (Giữ nguyên loadUsers, renderTable, openEditModal, saveCoin) ...
-// (Bạn copy lại các hàm loadUsers, renderTable, saveCoin từ file cũ vào đây để code gọn)
+// ============================================================
+// 1. QUẢN LÝ NGƯỜI CHƠI (USER)
+// ============================================================
+
 async function loadUsers() {
     const userListEl = document.getElementById('user-list');
     userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Đang tải...</td></tr>'; 
+
     try {
         onSnapshot(collection(db, "users"), (snapshot) => {
             allUsers = [];
             let totalCoins = 0;
+            let totalVNCoin = 0;
+
             snapshot.forEach((doc) => {
                 const data = doc.data();
                 allUsers.push({ id: doc.id, ...data });
                 totalCoins += (data.coins || 0);
+                totalVNCoin += (data.vn_coin || 0);
             });
+
             document.getElementById('total-users').innerText = allUsers.length;
             document.getElementById('total-coins').innerText = totalCoins.toLocaleString();
+            
             renderTable(allUsers);
         });
-    } catch (error) { console.error(error); }
+    } catch (error) {
+        console.error(error);
+        userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Lỗi tải dữ liệu</td></tr>';
+    }
 }
 
 function renderTable(users) {
     const userListEl = document.getElementById('user-list');
     userListEl.innerHTML = '';
-    if (users.length === 0) return;
+
+    if (users.length === 0) {
+        userListEl.innerHTML = '<tr><td colspan="6" style="text-align:center;">Không tìm thấy user nào</td></tr>';
+        return;
+    }
+
     users.forEach(user => {
+        const isBanned = user.bannedUntil && user.bannedUntil.toMillis() > Date.now();
         let statusHtml = `<span style="color:#27ae60; font-weight:bold;">Hoạt động</span>`;
         let actionBtn = `<button class="btn btn-ban" onclick="openBanModal('${user.id}', '${user.email}')">🚫 Cấm</button>`;
-        if (user.bannedUntil && user.bannedUntil.toMillis() > Date.now()) {
-            statusHtml = `<span class="badge-banned">Cấm</span>`;
+
+        if (isBanned) {
+            const date = user.bannedUntil.toDate();
+            const dateStr = date.toLocaleDateString('vi-VN');
+            statusHtml = `<span class="badge-banned">Cấm đến: ${dateStr}</span>`;
             actionBtn = `<button class="btn btn-unban" onclick="unbanUser('${user.id}')">🔓 Gỡ</button>`;
         }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${user.email}</td><td>${user.phone || '---'}</td>
+            <td>${user.email}</td>
+            <td>${user.phone || '---'}</td>
             <td style="font-weight:bold; color:#f39c12;">${(user.coins || 0).toLocaleString()}</td>
             <td style="font-weight:bold; color:#f1c40f;">${(user.vn_coin || 0).toLocaleString()}</td>
             <td>${statusHtml}</td>
-            <td style="display:flex; gap:5px;">
-                <button class="btn btn-edit" onclick="openEditModal('${user.id}', '${user.email}', ${user.coins||0}, 'coins')">Sửa Coin</button>
-                <button class="btn btn-edit" style="background:#d35400" onclick="openEditModal('${user.id}', '${user.email}', ${user.vn_coin||0}, 'vn_coin')">Sửa VN</button>
+            <td style="display:flex; flex-wrap:wrap; gap:5px;">
+                <button class="btn btn-edit" onclick="openEditModal('${user.id}', '${user.email}', ${user.coins || 0}, 'coins')">Sửa Coin</button>
+                <button class="btn btn-edit" style="background:#d35400" onclick="openEditModal('${user.id}', '${user.email}', ${user.vn_coin || 0}, 'vn_coin')">Sửa VN</button>
                 <button class="btn btn-view" onclick="showUserDetail('${user.id}')">📜 Chi tiết</button>
                 ${user.role !== 'admin' ? actionBtn : ''} 
             </td>
@@ -92,23 +143,48 @@ function renderTable(users) {
     });
 }
 
-window.openEditModal = (uid, email, val, type) => {
-    currentEditingId = uid; currentEditType = type; 
+// LOGIC SỬA TIỀN
+window.openEditModal = (uid, email, currentValue, type) => {
+    currentEditingId = uid;
+    currentEditType = type; 
+    
     document.getElementById('editing-email').innerText = email;
-    document.getElementById('edit-currency-name').innerText = type==='coins'?'Coin':'VNCoin';
-    document.getElementById('new-coin-input').value = val;
+    document.getElementById('edit-currency-name').innerText = type === 'coins' ? 'Coin Game' : 'VNCoin (Nạp)';
+    document.getElementById('new-coin-input').value = currentValue;
     document.getElementById('modal-edit-coin').classList.remove('hidden');
 };
+
 window.saveCoin = async () => {
     const amount = parseInt(document.getElementById('new-coin-input').value);
-    if(isNaN(amount) || amount < 0) return alert("Lỗi số");
-    await updateDoc(doc(db, "users", currentEditingId), { [currentEditType]: amount });
-    await saveLog(currentEditingId, "ADMIN_EDIT", "Money", 0, `Admin sửa tiền thành ${amount}`);
-    alert("Xong!"); closeModal('modal-edit-coin');
+    if (isNaN(amount) || amount < 0) return alert("Số không hợp lệ");
+    
+    try {
+        const userRef = doc(db, "users", currentEditingId);
+        const userSnap = await getDoc(userRef);
+        const oldVal = userSnap.data()[currentEditType] || 0;
+        
+        await updateDoc(userRef, { [currentEditType]: amount });
+
+        const adminUser = auth.currentUser;
+        await saveLog(
+            currentEditingId, 
+            "ADMIN_EDIT", 
+            currentEditType === 'coins' ? 'Coin' : 'VNCoin',
+            amount - oldVal, 
+            `Admin ${adminUser.email} chỉnh sửa thủ công`,
+            oldVal,
+            amount
+        );
+
+        alert("Cập nhật thành công!");
+        closeModal('modal-edit-coin');
+    } catch (error) {
+        alert("Lỗi: " + error.message);
+    }
 };
 
 // ============================================================
-// [CẬP NHẬT] QUẢN LÝ SHOP VIP & THỜI HẠN
+// 2. QUẢN LÝ SHOP VIP
 // ============================================================
 
 function loadShopItems() {
@@ -117,11 +193,15 @@ function loadShopItems() {
     
     onSnapshot(q, (snapshot) => {
         listEl.innerHTML = '';
+        if(snapshot.empty) {
+            listEl.innerHTML = '<tr><td colspan="7" style="text-align:center;">Chưa có sản phẩm nào. Hãy thêm mới!</td></tr>';
+            return;
+        }
+
         snapshot.forEach(doc => {
             const item = doc.data();
             let detailHtml = '';
             
-            // Hiển thị chi tiết theo loại
             if(item.itemCode === 'sun_pack') {
                 const days = item.duration === 99999 ? "Vĩnh viễn" : `${item.duration} Ngày`;
                 detailHtml = `<span style="color:#e67e22">⏳ ${days}</span>`;
@@ -133,11 +213,11 @@ function loadShopItems() {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><img src="${item.image}" style="width:40px;"></td>
+                <td><img src="${item.image}" style="width:40px; height:40px; object-fit:contain;"></td>
                 <td>${item.name}</td>
                 <td>${item.currency}</td>
                 <td style="font-weight:bold;">${parseInt(item.price).toLocaleString()}</td>
-                <td>${item.shopType}</td>
+                <td>${item.shopType === 'vncoin' ? '<span class="badge-active">VIP</span>' : '<span style="color:gray">Thường</span>'}</td>
                 <td>${detailHtml}</td>
                 <td>
                     <button class="btn btn-edit" onclick='openShopModal(${JSON.stringify({id: doc.id, ...item})})'>✏️</button>
@@ -151,6 +231,7 @@ function loadShopItems() {
 
 window.openShopModal = (item = null) => {
     const modal = document.getElementById('modal-shop-item');
+    
     if (item) {
         currentShopItemId = item.id;
         document.getElementById('shop-modal-title').innerText = "Sửa sản phẩm";
@@ -159,11 +240,10 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-price').value = item.price;
         document.getElementById('shop-image').value = item.image;
         document.getElementById('shop-currency').value = item.currency;
-        document.getElementById('shop-type').value = item.type;
+        document.getElementById('shop-type').value = item.type; 
         document.getElementById('shop-item-code').value = item.itemCode || '';
         document.getElementById('shop-category').value = item.shopType || 'vncoin';
         
-        // Load giá trị hoặc thời hạn
         if (item.itemCode === 'sun_pack') {
             document.getElementById('shop-duration').value = item.duration || 1;
         } else {
@@ -172,10 +252,8 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-is-hot').checked = item.isHot;
         
         // Trigger UI update
-        // (Gọi hàm này để ẩn hiện input đúng logic)
         const codeInput = document.getElementById('shop-item-code');
         if(item.itemCode === 'sun_pack') {
-             // Fake event change
              codeInput.dispatchEvent(new Event('change'));
         }
         
@@ -184,6 +262,7 @@ window.openShopModal = (item = null) => {
         document.getElementById('shop-modal-title').innerText = "Thêm sản phẩm";
         document.getElementById('form-shop-item').reset();
     }
+    
     modal.classList.remove('hidden');
 };
 
@@ -203,10 +282,9 @@ window.saveShopItem = async () => {
         itemCode: itemCode
     };
 
-    // Logic riêng cho Gói thời hạn vs Gói số lượng
     if (itemCode === 'sun_pack') {
-        data.duration = duration; // Lưu số ngày (hoặc 99999)
-        data.value = 0; // Không dùng value
+        data.duration = duration;
+        data.value = 0;
     } else {
         const val = parseInt(document.getElementById('shop-value').value);
         data.value = val;
@@ -216,21 +294,29 @@ window.saveShopItem = async () => {
     try {
         if (currentShopItemId) {
             await updateDoc(doc(db, "shop_items", currentShopItemId), data);
-            alert("Đã cập nhật!");
+            alert("Đã cập nhật sản phẩm!");
         } else {
             await addDoc(collection(db, "shop_items"), data);
-            alert("Đã thêm mới!");
+            alert("Đã thêm sản phẩm mới!");
         }
         closeModal('modal-shop-item');
-    } catch (e) { alert("Lỗi: " + e.message); }
+    } catch (e) {
+        alert("Lỗi: " + e.message);
+    }
 };
 
 window.deleteShopItem = async (id, name) => {
-    if(confirm(`Xóa "${name}"?`)) try { await deleteDoc(doc(db, "shop_items", id)); } catch(e) { alert(e.message); }
+    if(confirm(`Bạn chắc chắn muốn xóa "${name}"?`)) {
+        try {
+            await deleteDoc(doc(db, "shop_items", id));
+        } catch (e) {
+            alert("Lỗi xóa: " + e.message);
+        }
+    }
 };
 
 // ============================================================
-// [CẬP NHẬT] CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ NÂNG CAO
+// [CẬP NHẬT] CHI TIẾT USER & CHỈNH SỬA KHO ĐỒ
 // ============================================================
 
 window.showUserDetail = async (uid) => {
@@ -241,13 +327,16 @@ window.showUserDetail = async (uid) => {
     tbody.innerHTML = "";
 
     const data = await getAdminUserDetail(uid);
-    if (!data || !data.userData) return;
+    if (!data || !data.userData) {
+        infoEl.innerHTML = "<span style='color:red'>Không tìm thấy user!</span>";
+        return;
+    }
     const u = data.userData;
 
-    // --- RENDER KHO ĐỒ ---
+    // Render Inventory
     let invHtml = '';
 
-    // 1. Plant Food (Số lượng - Có nút Sửa)
+    // 1. Plant Food
     if (u.item_plant_food_count !== undefined) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #2ecc71;">
@@ -263,9 +352,7 @@ window.showUserDetail = async (uid) => {
         `;
     }
 
-    // 2. Sun Pack (Gói Mặt Trời - Kiểm tra cả mảng Inventory và Expiring)
-    
-    // a. Kiểm tra Vĩnh viễn (Trong mảng inventory)
+    // 2. Sun Pack
     if (u.inventory && u.inventory.includes('sun_pack')) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #f1c40f;">
@@ -280,11 +367,10 @@ window.showUserDetail = async (uid) => {
             </div>
         `;
     } 
-    // b. Kiểm tra Có thời hạn (Trong temp_items)
     else if (u.temp_items && u.temp_items.sun_pack) {
         const expireTime = u.temp_items.sun_pack.toDate();
         const now = new Date();
-        const timeLeft = Math.ceil((expireTime - now) / (1000 * 60 * 60 * 24)); // Số ngày còn lại
+        const timeLeft = Math.ceil((expireTime - now) / (1000 * 60 * 60 * 24)); 
         const isExpired = timeLeft <= 0;
         
         invHtml += `
@@ -314,7 +400,7 @@ window.showUserDetail = async (uid) => {
         </div>
     `;
 
-    // Render Logs (Giữ nguyên)
+    // Render Logs
     if (data.logs.length > 0) {
         data.logs.forEach(log => {
             const date = log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
@@ -324,13 +410,20 @@ window.showUserDetail = async (uid) => {
     }
 };
 
-// [MỚI] MỞ MODAL SỬA ITEM USER
+// MỞ MODAL SỬA ITEM
 window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     editingUserUid = uid;
     editingItemKey = itemKey;
     editingItemType = type;
 
     const modal = document.getElementById('modal-edit-player-item');
+    
+    // Kiểm tra modal có tồn tại không
+    if (!modal) {
+        alert("Lỗi: Không tìm thấy modal sửa item! Hãy chắc chắn bạn đã cập nhật file admin.html.");
+        return;
+    }
+
     const nameEl = document.getElementById('edit-item-name');
     const qtyGroup = document.getElementById('edit-qty-group');
     const durGroup = document.getElementById('edit-duration-group');
@@ -345,19 +438,18 @@ window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     } else {
         qtyGroup.classList.add('hidden');
         durGroup.classList.remove('hidden');
-        document.getElementById('edit-item-duration-select').value = '1'; // Reset về 1 ngày
+        document.getElementById('edit-item-duration-select').value = '1';
         document.getElementById('edit-item-custom-days').classList.add('hidden');
     }
 };
 
-// [MỚI] XỬ LÝ NÚT LƯU TRONG MODAL USER ITEM
+// XỬ LÝ NÚT LƯU
 window.submitEditUserItem = async () => {
     const userRef = doc(db, "users", editingUserUid);
     const adminUser = auth.currentUser;
 
     try {
         if (editingItemType === 'quantity') {
-            // Sửa số lượng (Plant Food)
             const newQty = parseInt(document.getElementById('edit-item-qty').value);
             if (isNaN(newQty) || newQty < 0) return alert("Số lượng không hợp lệ!");
 
@@ -365,32 +457,23 @@ window.submitEditUserItem = async () => {
             await saveLog(editingUserUid, "ADMIN_EDIT", "Item", 0, `Admin chỉnh Plant Food thành: ${newQty}`);
         } 
         else if (editingItemType === 'duration') {
-            // Sửa thời hạn (Sun Pack)
             const action = document.getElementById('edit-item-duration-select').value;
             
             if (action === 'remove') {
-                // Xóa khỏi cả mảng inventory và temp_items
                 await updateDoc(userRef, {
                     inventory: arrayRemove('sun_pack'),
-                    "temp_items.sun_pack": deleteField() // Cần import deleteField
+                    [`temp_items.${editingItemKey}`]: deleteField() 
                 });
-                // Note: deleteField cần import từ firestore, nhưng để đơn giản ta set null hoặc update object
-                // Cách an toàn ko cần import thêm: Đọc data -> xóa key -> ghi lại
-                // Nhưng ở đây ta dùng cách đơn giản: Xóa khỏi inventory là chính. 
-                // Với temp_items map, ta update:
-                await updateDoc(userRef, { [`temp_items.${editingItemKey}`]: null }); // Xóa field trong map
                 await saveLog(editingUserUid, "ADMIN_REVOKE", "Item", 0, `Admin xóa: ${editingItemKey}`);
             } 
             else if (action === 'permanent') {
-                // Thêm vào inventory, xóa khỏi temp
                 await updateDoc(userRef, {
                     inventory: arrayUnion('sun_pack'),
-                    [`temp_items.${editingItemKey}`]: null
+                    [`temp_items.${editingItemKey}`]: deleteField()
                 });
                 await saveLog(editingUserUid, "ADMIN_GIFT", "Item", 0, `Admin set Vĩnh viễn: ${editingItemKey}`);
             } 
             else {
-                // Cộng thêm ngày (Tính từ Hiện tại hoặc Thời điểm hết hạn cũ?) -> Tính từ HIỆN TẠI cho dễ
                 let days = 0;
                 if (action === 'custom') {
                     days = parseInt(document.getElementById('edit-item-custom-days').value);
@@ -403,7 +486,6 @@ window.submitEditUserItem = async () => {
                 const expireDate = new Date();
                 expireDate.setDate(expireDate.getDate() + days);
 
-                // Cập nhật vào temp_items, xóa khỏi inventory (nếu lỡ đang là vĩnh viễn)
                 await updateDoc(userRef, {
                     inventory: arrayRemove('sun_pack'),
                     [`temp_items.${editingItemKey}`]: expireDate
@@ -414,13 +496,88 @@ window.submitEditUserItem = async () => {
 
         alert("Cập nhật thành công!");
         closeModal('modal-edit-player-item');
-        showUserDetail(editingUserUid); // Refresh lại view
+        showUserDetail(editingUserUid);
     } catch (error) {
         alert("Lỗi: " + error.message);
     }
 };
 
-// ... (Các hàm tiện ích cũ: loadSystemConfig, closeModal, etc.) giữ nguyên ...
+// Cấu hình hệ thống (Nút Save)
+const btnSaveAnnouncement = document.getElementById('btn-save-announcement');
+if (btnSaveAnnouncement) {
+    btnSaveAnnouncement.addEventListener('click', async () => {
+        const content = document.getElementById('announcement-content').value;
+        const docRef = doc(db, "system_config", "general");
+        try {
+            await setDoc(docRef, { announcement: content }, { merge: true });
+            alert("✅ Đã cập nhật thông báo!");
+        } catch (error) { alert("Lỗi: " + error.message); }
+    });
+}
+
+const btnSaveConfig = document.getElementById('btn-save-config');
+if (btnSaveConfig) {
+    btnSaveConfig.addEventListener('click', async () => {
+        const isMaintenance = document.getElementById('maintenance-mode').value === "true";
+        const msg = document.getElementById('maintenance-msg').value;
+        const duration = document.getElementById('maintenance-duration').value;
+        let endTime = null;
+
+        if (isMaintenance) {
+            const now = new Date();
+            if (duration === 'custom') {
+                const customDateVal = document.getElementById('maintenance-custom-date').value;
+                if (!customDateVal) return alert("Vui lòng chọn ngày giờ!");
+                endTime = new Date(customDateVal);
+            } else {
+                endTime = new Date(now.getTime() + parseInt(duration) * 60000);
+            }
+        }
+
+        try {
+            await setDoc(doc(db, "system_config", "general"), { 
+                maintenance: isMaintenance,
+                maintenance_message: msg,
+                maintenance_end_time: endTime 
+            }, { merge: true });
+            alert(isMaintenance ? `✅ Đã bật bảo trì` : "✅ Đã tắt bảo trì!");
+        } catch (error) { alert("Lỗi: " + error.message); }
+    });
+}
+
+// 4. TIỆN ÍCH CHUNG
+window.openBanModal = (uid, email) => {
+    currentBanId = uid;
+    document.getElementById('ban-email').innerText = email;
+    document.getElementById('modal-ban-user').classList.remove('hidden');
+};
+
+window.confirmBan = async () => {
+    const days = parseInt(document.getElementById('ban-duration').value);
+    const banDate = new Date();
+    banDate.setDate(banDate.getDate() + days); 
+    try {
+        await updateDoc(doc(db, "users", currentBanId), { bannedUntil: banDate });
+        alert("Đã cấm thành công!");
+        closeModal('modal-ban-user');
+    } catch (error) { alert("Lỗi: " + error.message); }
+};
+
+window.unbanUser = async (uid) => {
+    if(confirm("Gỡ lệnh cấm?")) {
+        try {
+            await updateDoc(doc(db, "users", uid), { bannedUntil: null });
+            alert("Đã gỡ cấm!");
+        } catch (error) { alert("Lỗi: " + error.message); }
+    }
+};
+
+document.getElementById('search-box').addEventListener('input', (e) => {
+    const keyword = e.target.value.toLowerCase();
+    const filteredUsers = allUsers.filter(u => u.email.toLowerCase().includes(keyword));
+    renderTable(filteredUsers);
+});
+
 window.closeModal = (id) => {
     document.getElementById(id).classList.add('hidden');
     currentEditingId = null;
