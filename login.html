@@ -1,240 +1,162 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập - PvZ Clone</title>
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        
-        body {
-            height: 100vh;
-            overflow: hidden;
-            background-color: #222;
-        }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Nhập - PvZ Clone</title>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #222;
+        }
 
-        .bg-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('assets/bg.jpg') center/cover;
-            filter: brightness(0.4);
-            z-index: -1;
-        }
+        .bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('assets/bg.jpg') center/cover;
+            filter: brightness(0.4);
+            z-index: -1;
+        }
 
-        .login-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100%;
-        }
+        .login-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100%;
+        }
 
-        .login-box {
-            background: #fff;
-            padding: 40px;
-            width: 400px;
-            border-radius: 10px;
-            text-align: center;
-            border: 5px solid #8b4513;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            position: relative;
-        }
+        .login-box {
+            background: #fff;
+            padding: 40px;
+            width: 400px;
+            border-radius: 10px;
+            text-align: center;
+            border: 5px solid #8b4513;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+        }
 
-        h1 { color: #333; margin-bottom: 25px; font-size: 2em; }
+        h1 { color: #333; margin-bottom: 25px; font-size: 2em; }
 
-        .input-group { margin-bottom: 15px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        .input-group input {
-            width: 100%; padding: 12px;
-            border: 2px solid #ccc; border-radius: 5px;
-            font-size: 16px; outline: none;
-        }
-        .input-group input:focus { border-color: #e67e22; }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        .input-group input {
+            width: 100%; padding: 12px;
+            border: 2px solid #ccc; border-radius: 5px;
+            font-size: 16px; outline: none;
+        }
+        .input-group input:focus { border-color: #e67e22; }
 
-        .wood-btn {
-            width: 100%; padding: 12px;
-            background: #8b4513; color: white;
-            border: 2px solid #5e2f0d; border-radius: 5px;
-            font-size: 1.1em; font-weight: bold;
-            cursor: pointer; margin-top: 10px;
-            transition: 0.2s;
-        }
-        .wood-btn:hover { background: #a0522d; }
-        .wood-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        .wood-btn {
+            width: 100%; padding: 12px;
+            background: #8b4513; color: white;
+            border: 2px solid #5e2f0d; border-radius: 5px;
+            font-size: 1.1em; font-weight: bold;
+            cursor: pointer; margin-top: 10px;
+            transition: 0.2s;
+        }
+        .wood-btn:hover { background: #a0522d; }
+        .wood-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
 
-        .google-btn {
-            background: #fff;
-            color: #444;
-            border: 2px solid #ddd;
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .google-btn:hover { background: #f5f5f5; }
-        .google-btn img { width: 20px; }
+        /* Style mới cho nút Google */
+        .google-btn {
+            background: #fff;
+            color: #444;
+            border: 2px solid #ddd;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .google-btn:hover { background: #f5f5f5; }
+        .google-btn img { width: 20px; }
 
-        .links { margin-top: 20px; font-size: 0.9em; color: #555; }
-        .links a { text-decoration: none; color: #d35400; font-weight: bold; }
-        .links a:hover { text-decoration: underline; }
-
-        /* Modal Style */
-        .modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; 
-            z-index: 100; 
-        }
-        .modal-content { 
-            background: white; padding: 30px; border-radius: 10px; width: 380px; 
-            text-align: center; border: 3px solid #e67e22; 
-        }
-        .modal h3 { color: #e67e22; margin-bottom: 10px; }
-        .modal p { font-size: 0.9em; color: #555; margin-bottom: 20px; }
-        .error-msg { color: red; font-size: 0.9em; margin-bottom: 10px; display: none; }
-    </style>
+        .links { margin-top: 20px; font-size: 0.9em; color: #555; }
+        .links a { text-decoration: none; color: #d35400; font-weight: bold; }
+        .links a:hover { text-decoration: underline; }
+    </style>
 </head>
 <body>
 
-    <div class="bg-layer"></div>
+    <div class="bg-layer"></div>
 
-    <div class="login-wrapper">
-        <div class="login-box">
-            <h1>ĐĂNG NHẬP</h1>
-            
-            <form id="form-login" onsubmit="event.preventDefault()">
-                <div class="input-group">
-                    <label>Email:</label>
-                    <input type="email" id="email" placeholder="Nhập email..." required>
-                </div>
-                
-                <div class="input-group">
-                    <label>Mật khẩu:</label>
-                    <input type="password" id="password" placeholder="Nhập mật khẩu..." required>
-                </div>
+    <div class="login-wrapper">
+        <div class="login-box">
+            <h1>ĐĂNG NHẬP</h1>
+            
+            <form id="form-login" onsubmit="event.preventDefault()">
+                <div class="input-group">
+                    <label>Email:</label>
+                    <input type="email" id="email" placeholder="Nhập email..." required>
+                </div>
+                
+                <div class="input-group">
+                    <label>Mật khẩu:</label>
+                    <input type="password" id="password" placeholder="Nhập mật khẩu..." required>
+                </div>
 
-                <button type="submit" id="btn-submit" class="wood-btn">VÀO GAME</button>
-            </form>
+                <button type="submit" id="btn-submit" class="wood-btn">VÀO GAME</button>
+            </form>
 
-            <button id="btn-google" class="wood-btn google-btn">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google">
-                Đăng nhập bằng Google
-            </button>
+            <button id="btn-google" class="wood-btn google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google">
+                Đăng nhập bằng Google
+            </button>
 
-            <div class="links">
-                Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
-                <br>
-                <a href="forgot_password.html" style="color: #e74c3c; font-size: 0.9em;">Quên mật khẩu?</a>
-                <br><br>
-                <a href="index.html" style="color: #7f8c8d;">← Quay lại Trang chủ</a>
-            </div>
-        </div>
-    </div>
+            <div class="links">
+                Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
+                <br>
+                <a href="forgot_password.html" style="color: #e74c3c; font-size: 0.9em;">Quên mật khẩu?</a>
+                <br><br>
+                <a href="index.html" style="color: #7f8c8d;">← Quay lại Trang chủ</a>
+            </div>
+        </div>
+    </div>
 
-    <div id="modal-complete-profile" class="modal">
-        <div class="modal-content">
-            <h3>⚠️ CẬP NHẬT THÔNG TIN</h3>
-            <p>Để bảo mật tài khoản và đăng nhập bằng Email sau này, vui lòng bổ sung thông tin.</p>
-            <div id="complete-error" class="error-msg"></div>
-            
-            <div class="input-group">
-                <label>Tạo mật khẩu đăng nhập:</label>
-                <input type="password" id="comp-password" placeholder="Nhập mật khẩu mới...">
-            </div>
-            <div class="input-group">
-                <label>Số điện thoại bảo mật:</label>
-                <input type="text" id="comp-phone" placeholder="Nhập SĐT của bạn...">
-            </div>
-            
-            <button class="wood-btn" id="btn-complete-profile">Lưu & Vào Game</button>
-        </div>
-    </div>
+    <script type="module">
+        import { auth } from './src/firebase/config.js';
+        import { loginWithGoogle } from './src/firebase/auth.js';
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-    <script type="module">
-        // [FIX LỖI DEPLOY] Import trực tiếp từ file nội bộ, KHÔNG dùng link CDN
-        import { loginWithGoogle, completeUserProfile, loginUser } from './src/firebase/auth.js';
+        // Xử lý đăng nhập bằng Google
+        document.getElementById('btn-google').addEventListener('click', async () => {
+            try {
+                await loginWithGoogle();
+                window.location.href = "index.html";
+            } catch (err) {
+                console.error("Lỗi Google Auth:", err);
+                if (err.code !== 'auth/popup-closed-by-user') {
+                    alert("Đăng nhập Google thất bại!\nLỗi: " + err.message);
+                }
+            }
+        });
 
-        let tempUser = null;
+        document.getElementById('btn-submit').addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const btn = document.getElementById('btn-submit');
+            
+            if (!email || !pass) return; 
 
-        // Xử lý đăng nhập bằng Google
-        document.getElementById('btn-google').addEventListener('click', async () => {
-            try {
-                const result = await loginWithGoogle();
-                
-                if (result.isNewOrIncomplete) {
-                    tempUser = result.user;
-                    document.getElementById('modal-complete-profile').style.display = 'flex';
-                } else {
-                    window.location.href = "index.html";
-                }
-            } catch (err) {
-                console.error("Lỗi Google Auth:", err);
-                if (err.code !== 'auth/popup-closed-by-user') {
-                    alert("Đăng nhập Google thất bại!\nLỗi: " + err.message);
-                }
-            }
-        });
+            const originalText = btn.innerText;
+            btn.innerText = "Đang xử lý...";
+            btn.disabled = true;
 
-        // Xử lý hoàn thiện hồ sơ
-        document.getElementById('btn-complete-profile').addEventListener('click', async () => {
-            const pass = document.getElementById('comp-password').value;
-            const phone = document.getElementById('comp-phone').value;
-            const errorEl = document.getElementById('complete-error');
-            const btn = document.getElementById('btn-complete-profile');
-
-            if (pass.length < 6) {
-                errorEl.innerText = "Mật khẩu phải từ 6 ký tự trở lên!";
-                errorEl.style.display = 'block';
-                return;
-            }
-            if (!phone || phone.trim() === "") {
-                errorEl.innerText = "Vui lòng nhập số điện thoại!";
-                errorEl.style.display = 'block';
-                return;
-            }
-
-            btn.innerText = "Đang lưu...";
-            btn.disabled = true;
-            errorEl.style.display = 'none';
-
-            try {
-                if (tempUser) {
-                    await completeUserProfile(tempUser, pass, phone);
-                    alert("Cập nhật thành công! Đang vào game...");
-                    window.location.href = "index.html";
-                }
-            } catch (err) {
-                console.error(err);
-                errorEl.innerText = "Lỗi cập nhật: " + err.message;
-                errorEl.style.display = 'block';
-                btn.innerText = "Lưu & Vào Game";
-                btn.disabled = false;
-            }
-        });
-
-        // Xử lý đăng nhập thường
-        document.getElementById('btn-submit').addEventListener('click', async () => {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('password').value;
-            const btn = document.getElementById('btn-submit');
-            
-            if (!email || !pass) return; 
-
-            const originalText = btn.innerText;
-            btn.innerText = "Đang xử lý...";
-            btn.disabled = true;
-
-            try {
-                // Sử dụng hàm loginUser từ auth.js thay vì gọi firebase trực tiếp
-                await loginUser(email, pass);
-                window.location.href = "index.html";
-            } catch (err) {
-                console.error("Lỗi:", err);
-                alert("Đăng nhập thất bại!\nLỗi: " + err.message);
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        });
-    </script>
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                window.location.href = "index.html";
+            } catch (err) {
+                console.error("Lỗi:", err);
+                alert("Đăng nhập thất bại!\nLỗi: " + err.message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>
