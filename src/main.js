@@ -65,9 +65,21 @@ monitorAuthState(async (user) => {
 
             currentState.userRole = userData.role || 'user';
             
-            // [QUAN TRỌNG] Đồng bộ dữ liệu vật phẩm xuống LocalStorage cho GameCore dùng
+            // [CẬP NHẬT ĐỒNG BỘ DỮ LIỆU]
             localStorage.setItem('item_plant_food_count', userData.item_plant_food_count || 0);
             localStorage.setItem('user_inventory', JSON.stringify(userData.inventory || []));
+            
+            // Lưu thông tin đồ có hạn (chuyển Timestamp sang millis)
+            const tempItems = {};
+            if (userData.temp_items) {
+                for (const [key, val] of Object.entries(userData.temp_items)) {
+                    if(val && val.toDate) tempItems[key] = val.toDate().getTime();
+                }
+            }
+            localStorage.setItem('user_temp_items', JSON.stringify(tempItems));
+
+            // Lưu cài đặt Bật/Tắt
+            localStorage.setItem('user_item_settings', JSON.stringify(userData.item_settings || {}));
 
             checkMaintenanceAndKick();
             updateNotificationUI();
@@ -120,6 +132,8 @@ function activeGuestMode() {
     // Reset LocalStorage cho khách
     localStorage.setItem('item_plant_food_count', 0);
     localStorage.setItem('user_inventory', JSON.stringify([]));
+    localStorage.setItem('user_temp_items', JSON.stringify({}));
+    localStorage.setItem('user_item_settings', JSON.stringify({}));
 
     ui.greeting.textContent = "Khách";
     
@@ -226,7 +240,6 @@ function updateNotificationUI() {
 // --- CÁC HÀM UI PHỤ TRỢ ---
 function updateUserUI(email, coins, vncoin, role) {
     ui.greeting.textContent = `Hi, ${email}`;
-    // Hiển thị cả 2 loại tiền trên thanh header (nếu cần)
     ui.balance.innerHTML = `💰 ${coins.toLocaleString()} | 🟡 ${vncoin.toLocaleString()}`;
     ui.balance.classList.remove('hidden');
 

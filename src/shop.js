@@ -3,7 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { 
     doc, onSnapshot, collection, query, orderBy, limit, getDocs, where 
 } from "firebase/firestore"; 
-import { buyShopItemWithLog } from "./firebase/auth.js";
+import { buyShopItemWithLog, toggleItemStatus } from "./firebase/auth.js"; // [CẬP NHẬT] Import thêm toggleItemStatus
 
 // Biến toàn cục
 let SHOP_ITEMS = [];
@@ -61,7 +61,7 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 3. Render Shop (Logic check tiền chuẩn xác)
+// 3. Render Shop (Logic check tiền chuẩn xác & Hiển thị chi tiết)
 window.renderShopByType = function(type) {
     const gridEl = document.getElementById(`grid-${type}`);
     gridEl.innerHTML = "";
@@ -81,6 +81,20 @@ window.renderShopByType = function(type) {
         // Xử lý ảnh
         const imgUrl = (item.image && item.image.includes('assets/')) ? item.image : 'assets/sun.png'; 
 
+        // [MỚI] TẠO THÔNG TIN CHI TIẾT GÓI
+        let detailInfo = "";
+        if (item.type === 'coin') {
+            detailInfo = `<div style="color:#2ecc71; font-size:0.9em;">Nhận: <b>${parseInt(item.value).toLocaleString()} Coin</b></div>`;
+        } else if (item.itemCode === 'plant_food') {
+            detailInfo = `<div style="color:#27ae60; font-size:0.9em;">Số lượng: <b>${item.amount || 1} bình</b></div>`;
+        } else if (item.itemCode === 'sun_pack') {
+            if (item.duration && item.duration !== 99999) {
+                detailInfo = `<div style="color:#e67e22; font-size:0.9em;">Thời hạn: <b>${item.duration} Ngày</b></div>`;
+            } else {
+                detailInfo = `<div style="color:#f1c40f; font-size:0.9em;">Thời hạn: <b>Vĩnh viễn</b></div>`;
+            }
+        }
+
         const card = document.createElement('div');
         card.className = "product-card";
         
@@ -97,7 +111,8 @@ window.renderShopByType = function(type) {
             <div class="product-info">
                 <div>
                     <div class="product-name">${item.name}</div>
-                    <div class="product-desc">${item.description || ''}</div>
+                    ${detailInfo} 
+                    <div class="product-desc" style="margin-top:5px;">${item.description || ''}</div>
                 </div>
                 <div>
                     <div class="price-tag">${parseInt(item.price).toLocaleString()} ${item.currency}</div>
@@ -113,7 +128,7 @@ window.renderShopByType = function(type) {
     });
 }
 
-// 4. Render Kho Đồ (Inventory)
+// 4. Render Kho Đồ (Inventory) [CẬP NHẬT LỚN]
 window.renderInventory = function() {
     const container = document.getElementById('inventory-container');
     container.innerHTML = "";
@@ -129,31 +144,82 @@ window.renderInventory = function() {
                     <div class="inv-icon">🍃</div>
                     <div>
                         <div style="font-weight:bold; font-size:1.2em;">Thuốc Tăng Lực</div>
-                        <div style="color:#bdc3c7; font-size:0.9em;">Dùng trong game để buff cây</div>
+                        <div style="color:#bdc3c7; font-size:0.9em;">SL: <b>${plantFoodCount}</b></div>
                     </div>
                 </div>
-                <div class="inv-count">x${plantFoodCount}</div>
+                <div class="inv-count">Sẵn sàng</div>
             </div>
         `;
     }
 
-    // B. Các Item Gói/Vĩnh viễn (Mảng)
+    // B. Xử lý Sun Pack (Gộp logic Vĩnh viễn & Có hạn & Bật/Tắt)
+    let sunPackStatus = null; // null = không có, 'perm' = vĩnh viễn, date = ngày hết hạn
+    
+    // Ưu tiên kiểm tra Vĩnh viễn trước
+    if (userData.inventory && userData.inventory.includes('sun_pack')) {
+        sunPackStatus = 'perm';
+    } 
+    // Sau đó kiểm tra Có hạn
+    else if (userData.temp_items && userData.temp_items.sun_pack) {
+        sunPackStatus = userData.temp_items.sun_pack.toDate(); // Timestamp object
+    }
+
+    if (sunPackStatus) {
+        hasItem = true;
+        // Kiểm tra trạng thái bật/tắt (Mặc định là Bật nếu chưa có setting)
+        const isActive = userData.item_settings && userData.item_settings.sun_pack !== false; 
+        const btnColor = isActive ? '#c0392b' : '#27ae60';
+        const btnText = isActive ? 'TẮT' : 'BẬT';
+        
+        let timeText = "";
+        let isExpired = false;
+
+        if (sunPackStatus === 'perm') {
+            timeText = "Thời hạn: Vĩnh viễn";
+        } else {
+            const now = new Date();
+            const diff = sunPackStatus - now;
+            if (diff > 0) {
+                const daysLeft = Math.ceil(diff / (1000 * 60 * 60 * 24));
+                timeText = `Hết hạn: ${sunPackStatus.toLocaleDateString()} (${daysLeft} ngày)`;
+            } else {
+                timeText = "Đã hết hạn";
+                isExpired = true;
+            }
+        }
+
+        if (!isExpired) {
+            container.innerHTML += `
+                <div class="inventory-item" style="border-left-color: #f1c40f;">
+                    <div style="display:flex;align-items:center;">
+                        <div class="inv-icon">☀️</div>
+                        <div>
+                            <div style="font-weight:bold; font-size:1.2em;">Gói Mặt Trời</div>
+                            <div style="color:#bdc3c7;font-size:0.9em;">${timeText}</div>
+                        </div>
+                    </div>
+                    <button onclick="handleToggle('sun_pack', ${!isActive})" 
+                        style="background:${btnColor}; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; min-width: 80px;">
+                        ${btnText}
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // C. Các item khác trong inventory (Trừ sun_pack đã xử lý)
     if (userData.inventory && userData.inventory.length > 0) {
         userData.inventory.forEach(code => {
-            hasItem = true;
-            let itemName = "Vật phẩm";
-            let itemDesc = "Đã sở hữu";
-            let icon = "🎁";
-
-            if(code === 'sun_pack') { itemName = "Gói Mặt Trời"; itemDesc = "+100 Sun khi bắt đầu game"; icon = "☀️"; }
+            if (code === 'sun_pack') return; // Đã xử lý ở trên
             
+            hasItem = true;
             container.innerHTML += `
                 <div class="inventory-item" style="border-left-color: #9b59b6;">
                     <div style="display:flex; align-items:center;">
-                        <div class="inv-icon">${icon}</div>
+                        <div class="inv-icon">🎁</div>
                         <div>
-                            <div style="font-weight:bold; font-size:1.2em;">${itemName} (${code})</div>
-                            <div style="color:#bdc3c7; font-size:0.9em;">${itemDesc}</div>
+                            <div style="font-weight:bold; font-size:1.2em;">Vật Phẩm: ${code}</div>
+                            <div style="color:#bdc3c7; font-size:0.9em;">Đã sở hữu vĩnh viễn</div>
                         </div>
                     </div>
                     <div class="inv-count">✔</div>
@@ -162,13 +228,23 @@ window.renderInventory = function() {
         });
     }
 
-    if (!hasItem) container.innerHTML = '<div style="text-align:center; padding:50px; color:#7f8c8d;">Túi đồ trống.</div>';
+    if (!hasItem) {
+        container.innerHTML = '<div style="text-align:center; padding:50px; color:#7f8c8d;">Túi đồ trống rỗng... Hãy mua sắm đi!</div>';
+    }
 }
+
+// [MỚI] Xử lý nút Bật/Tắt
+window.handleToggle = async (itemCode, newState) => {
+    if (!currentUser) return;
+    // Gọi hàm cập nhật Firebase (đã import ở trên)
+    await toggleItemStatus(currentUser.uid, itemCode, newState);
+    // Giao diện sẽ tự cập nhật nhờ listener onSnapshot
+};
 
 // 5. Render Lịch Sử
 window.renderHistory = async function() {
     const tbody = document.getElementById('history-body');
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải dữ liệu...</td></tr>';
 
     try {
         const q = query(
@@ -183,7 +259,7 @@ window.renderHistory = async function() {
         tbody.innerHTML = "";
 
         if(snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Chưa có giao dịch.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Chưa có giao dịch nào.</td></tr>';
             return;
         }
 

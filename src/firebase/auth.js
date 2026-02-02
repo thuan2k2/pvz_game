@@ -36,7 +36,6 @@ export async function loginWithGoogle() {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
 
-        // Kiểm tra xem user đã tồn tại trong Firestore chưa
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
 
@@ -44,7 +43,6 @@ export async function loginWithGoogle() {
             const config = await getSystemConfig();
             const starterCoins = config?.economy?.starter_coins || 0;
 
-            // Nếu là người dùng mới, khởi tạo dữ liệu
             await setDoc(userRef, {
                 email: user.email,
                 phone: user.phoneNumber || "",
@@ -150,27 +148,25 @@ export function monitorAuthState(callback) {
 
 // [CẬP NHẬT QUAN TRỌNG] Các hàm gọi Cloud Functions để chống Hack
 
-// 1. Gọi Server để nhận thưởng cuối game (Thay thế addUserCoins ở Client)
 export async function callEndGameReward(isVictory) {
     const claimReward = httpsCallable(functions, 'claimEndGameReward');
     try {
         const result = await claimReward({ isVictory: isVictory });
-        return result.data; // Trả về { success, reward, message }
+        return result.data; 
     } catch (error) {
         console.error("Lỗi gọi function nhận thưởng:", error);
         return null;
     }
 }
 
-// 2. Gọi Server để mua đồ (An toàn tuyệt đối)
 export async function callBuyItem(itemId) {
     const buyItem = httpsCallable(functions, 'buyShopItem');
     try {
         const result = await buyItem({ itemId: itemId });
-        return result.data; // Trả về { success, newBalance }
+        return result.data; 
     } catch (error) {
         console.error("Lỗi gọi function mua đồ:", error);
-        throw error; // Ném lỗi để main.js hiển thị alert
+        throw error; 
     }
 }
 
@@ -222,8 +218,8 @@ export async function saveLog(uid, actionType, assetType, amount, note, oldBalan
     try {
         await addDoc(collection(db, "transactions_history"), {
             uid: uid,
-            type: actionType, // DEPOSIT, BUY_SHOP, GAME_REWARD...
-            assetType: assetType, // VNCoin, Coin, Item
+            type: actionType, 
+            assetType: assetType, 
             amount: amount,
             note: note,
             balanceBefore: oldBalance,
@@ -236,7 +232,19 @@ export async function saveLog(uid, actionType, assetType, amount, note, oldBalan
     }
 }
 
-// --- 2. HÀM MUA ĐỒ SHOP (Xử lý thông minh cho VNCoin & Coin) ---
+// --- [MỚI] HÀM BẬT/TẮT TRẠNG THÁI ITEM ---
+export async function toggleItemStatus(uid, itemCode, isActive) {
+    try {
+        const userRef = doc(db, "users", uid);
+        await updateDoc(userRef, {
+            [`item_settings.${itemCode}`]: isActive 
+        });
+    } catch (error) {
+        console.error("Lỗi toggle:", error);
+    }
+}
+
+// --- 2. HÀM MUA ĐỒ SHOP (CẬP NHẬT LOGIC CỘNG DỒN NGÀY) ---
 export async function buyShopItemWithLog(uid, itemData) {
     const userRef = doc(db, "users", uid);
 
@@ -261,33 +269,42 @@ export async function buyShopItemWithLog(uid, itemData) {
 
             // B. CHUẨN BỊ DỮ LIỆU CẬP NHẬT
             let updates = {
-                [currencyField]: newBalance // Trừ tiền
+                [currencyField]: newBalance 
             };
 
-            // C. XỬ LÝ "GIAO HÀNG" DỰA TRÊN TYPE
+            // C. XỬ LÝ "GIAO HÀNG" 
             if (itemData.type === 'coin') {
                 updates.coins = increment(parseInt(itemData.value));
             } 
             else if (itemData.type === 'item') {
                 if (itemData.itemCode === 'plant_food') {
-                    // Cộng dồn số lượng vào field riêng
+                    // Cộng dồn số lượng 
                     updates.item_plant_food_count = increment(parseInt(itemData.amount || 1));
                 } else if (itemData.itemCode === 'sun_pack') {
-                    // [MỚI] Xử lý Gói Mặt Trời (Thời hạn hoặc Vĩnh viễn)
+                    // [MỚI] Xử lý Gói Mặt Trời: Cộng dồn ngày
                     if (itemData.duration && itemData.duration !== 99999) {
-                        // Tính ngày hết hạn
-                        const expireDate = new Date();
-                        expireDate.setDate(expireDate.getDate() + parseInt(itemData.duration));
-                        
-                        // Lưu vào map 'temp_items' (cần import update để set nested field nếu chưa có)
-                        // Tuy nhiên updateDoc hỗ trợ dot notation: "temp_items.sun_pack"
-                        updates[`temp_items.${itemData.itemCode}`] = expireDate;
+                        const now = new Date().getTime();
+                        let currentExpire = now;
+
+                        // Nếu đang có hạn thì cộng nối tiếp từ ngày hết hạn cũ
+                        if (userData.temp_items && userData.temp_items.sun_pack) {
+                            const oldDate = userData.temp_items.sun_pack.toMillis();
+                            if (oldDate > now) currentExpire = oldDate;
+                        }
+
+                        // Cộng thêm số ngày mua 
+                        const additionalMillis = parseInt(itemData.duration) * 24 * 60 * 60 * 1000;
+                        const newExpireDate = new Date(currentExpire + additionalMillis);
+
+                        updates[`temp_items.sun_pack`] = newExpireDate;
+                        updates[`item_settings.sun_pack`] = true; // Mặc định bật
                     } else {
                         // Vĩnh viễn -> Thêm vào inventory
                         updates.inventory = arrayUnion(itemData.itemCode);
+                        updates[`item_settings.sun_pack`] = true;
                     }
                 } else {
-                    // Vật phẩm khác (Skin, Cây) -> Thêm vào mảng inventory
+                    // Vật phẩm khác -> Thêm vào mảng inventory
                     updates.inventory = arrayUnion(itemData.itemCode);
                 }
             }
@@ -319,11 +336,9 @@ export async function buyShopItemWithLog(uid, itemData) {
 // --- 3. HÀM ADMIN: LẤY CHI TIẾT USER & LOGS ---
 export async function getAdminUserDetail(uid) {
     try {
-        // Lấy Info
         const userSnap = await getDoc(doc(db, "users", uid));
         const userData = userSnap.exists() ? userSnap.data() : null;
 
-        // Lấy Logs (50 giao dịch gần nhất)
         const q = query(
             collection(db, "transactions_history"), 
             where("uid", "==", uid),
@@ -340,18 +355,16 @@ export async function getAdminUserDetail(uid) {
     }
 }
 
-// --- [MỚI] HÀM TRỪ ITEM KHI SỬ DỤNG TRONG GAME ---
+// --- HÀM TRỪ ITEM KHI SỬ DỤNG TRONG GAME ---
 export async function useGameItem(uid, itemCode) {
     try {
         const userRef = doc(db, "users", uid);
         
         if (itemCode === 'plant_food') {
-            // Trừ 1 Plant Food
             await updateDoc(userRef, { 
                 item_plant_food_count: increment(-1) 
             });
         }
-        // Có thể thêm logic cho các item tiêu hao khác ở đây (ví dụ boom, ice, etc.)
         
         console.log(`Đã dùng 1 ${itemCode} và đồng bộ lên server.`);
     } catch (error) {

@@ -12,7 +12,6 @@ import { Projectile } from './classes/Projectile.js';
 import { Sun } from './classes/Sun.js';
 import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
-// [CẬP NHẬT] Thêm import useGameItem
 import { callEndGameReward, getSystemConfig, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
 
@@ -147,13 +146,34 @@ export class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        // 1. Kiểm tra Gói Mặt Trời (Sun Pack) từ Inventory
-        const rawInventory = localStorage.getItem('user_inventory'); 
-        const inventory = rawInventory ? JSON.parse(rawInventory) : [];
-        
+        // [FIXED] LOGIC KIỂM TRA GÓI MẶT TRỜI (SUN PACK)
+        const inventory = JSON.parse(localStorage.getItem('user_inventory') || '[]');
+        const tempItems = JSON.parse(localStorage.getItem('user_temp_items') || '{}');
+        const settings = JSON.parse(localStorage.getItem('user_item_settings') || '{}');
+
+        let hasSunPack = false;
+
+        // 1. Kiểm tra Vĩnh viễn (Trong mảng inventory)
         if (inventory.includes('sun_pack')) {
+            hasSunPack = true;
+        } 
+        // 2. Kiểm tra Có hạn (Trong temp_items)
+        else if (tempItems.sun_pack) {
+            const now = Date.now();
+            // So sánh thời gian hiện tại với thời gian hết hạn
+            if (tempItems.sun_pack > now) {
+                hasSunPack = true;
+            }
+        }
+
+        // 3. Kiểm tra Cài đặt Bật/Tắt (Mặc định là Bật/true nếu chưa có setting)
+        const isEnabled = settings.sun_pack !== false; 
+
+        if (hasSunPack && isEnabled) {
             this.sun += 100; // Cộng 100 sun
             console.log("🌞 Đã kích hoạt Gói Mặt Trời (+100 Sun)");
+        } else {
+            console.log("🌞 Không kích hoạt Sun Pack (Không có hoặc Đang tắt)");
         }
 
         // 2. Cập nhật số lượng Plant Food mới nhất
@@ -308,7 +328,7 @@ export class GameCore {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
                     this.plants[i].activatePower();
                     
-                    // --- [FIX] LOGIC TRỪ ITEM TRÊN SERVER ---
+                    // --- LOGIC TRỪ ITEM TRÊN SERVER ---
                     this.plantFoodCount--; // 1. Trừ hiển thị ngay trong game
                     localStorage.setItem('item_plant_food_count', this.plantFoodCount); // 2. Lưu local
                     this.updatePlantFoodUI();
@@ -533,7 +553,7 @@ export class GameCore {
                 rewardCoinEl.innerText = data.reward; 
                 console.log(data.message);
 
-                // [MỚI] Ghi log lịch sử nhận thưởng vào hệ thống
+                // Ghi log lịch sử nhận thưởng vào hệ thống
                 if (auth.currentUser) {
                     saveLog(
                         auth.currentUser.uid,

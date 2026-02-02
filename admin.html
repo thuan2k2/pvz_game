@@ -140,7 +140,7 @@
             </div>
             <div class="table-container">
                 <table class="admin-table">
-                    <thead><tr><th>Ảnh</th><th>Tên</th><th>Loại tiền</th><th>Giá</th><th>Loại</th><th>Chi tiết</th><th>Hành động</th></tr></thead>
+                    <thead><tr><th>Ảnh</th><th>Tên</th><th>Loại tiền</th><th>Giá</th><th>Loại</th><th>Hot</th><th>Hành động</th></tr></thead>
                     <tbody id="shop-items-list"><tr><td colspan="7" style="text-align:center;">Đang tải...</td></tr></tbody>
                 </table>
             </div>
@@ -209,26 +209,17 @@
 
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1">
-                        <label id="shop-value-label">Giá trị/SL:</label>
-                        <input type="number" id="shop-value" class="form-control" placeholder="5000 hoặc 1">
-                        
-                        <select id="shop-duration" class="form-control hidden">
-                            <option value="99999">Vĩnh viễn</option>
-                            <option value="1">1 Ngày</option>
-                            <option value="3">3 Ngày</option>
-                            <option value="7">7 Ngày</option>
-                            <option value="14">14 Ngày</option>
-                            <option value="30">30 Ngày</option>
-                        </select>
+                        <label>Giá trị/SL:</label>
+                        <input type="number" id="shop-value" class="form-control" placeholder="5000 hoặc 10">
                     </div>
                     
                     <div class="form-group" style="flex:1">
                         <label>Chọn Vật Phẩm:</label>
-                        <select id="shop-item-code" class="form-control" onchange="checkItemType()">
-                            <option value="">-- Không --</option>
+                        <select id="shop-item-code" class="form-control">
+                            <option value="">-- Không (Gói tiền) --</option>
                             <option value="plant_food">🍃 Thuốc Tăng Lực</option>
-                            <option value="sun_pack">☀️ Gói Mặt trời (Ngày)</option>
-                        </select>
+                            <option value="sun_pack">☀️ Gói Nắng (+50)</option>
+                            </select>
                     </div>
                 </div>
 
@@ -239,36 +230,6 @@
                     <button type="button" class="btn" style="background:#95a5a6;" onclick="closeModal('modal-shop-item')">Hủy</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <div id="modal-edit-player-item" class="modal hidden">
-        <div class="modal-box">
-            <h3 id="edit-item-title">Chỉnh sửa vật phẩm</h3>
-            <p style="margin-bottom:10px;">Đang sửa: <b id="edit-item-name" style="color:#e67e22">...</b></p>
-            
-            <div id="edit-qty-group" class="hidden">
-                <label>Nhập số lượng mới:</label>
-                <input type="number" id="edit-item-qty" class="form-control">
-            </div>
-
-            <div id="edit-duration-group" class="hidden">
-                <label>Chọn hạn sử dụng mới:</label>
-                <select id="edit-item-duration-select" class="form-control" onchange="toggleCustomDuration()">
-                    <option value="remove">🗑️ XÓA VẬT PHẨM NÀY</option>
-                    <option value="permanent">♾️ Vĩnh viễn</option>
-                    <option value="1">📅 Thêm 1 Ngày</option>
-                    <option value="3">📅 Thêm 3 Ngày</option>
-                    <option value="7">📅 Thêm 7 Ngày</option>
-                    <option value="custom">✍️ Nhập số ngày cụ thể...</option>
-                </select>
-                <input type="number" id="edit-item-custom-days" class="form-control hidden" placeholder="Nhập số ngày (Ví dụ: 5)" style="margin-top:10px;">
-            </div>
-
-            <div class="modal-actions" style="margin-top:20px;">
-                <button class="btn btn-edit" onclick="submitEditUserItem()">Cập nhật ngay</button>
-                <button class="btn" onclick="closeModal('modal-edit-player-item')" style="background: #95a5a6;">Hủy</button>
-            </div>
         </div>
     </div>
 
@@ -302,44 +263,17 @@
             const customGroup = document.getElementById('custom-date-group');
             if (val === 'custom') customGroup.style.display = 'block'; else customGroup.style.display = 'none';
         }
-        // Logic UI cho Shop Modal
         function toggleItemCodeInput() {
             const type = document.getElementById('shop-type').value;
             const codeInput = document.getElementById('shop-item-code');
             if(type === 'coin') {
                 codeInput.value = "";
                 codeInput.disabled = true;
-                checkItemType(); 
             } else {
                 codeInput.disabled = false;
                 codeInput.value = "plant_food"; 
-                checkItemType();
             }
         }
-        function checkItemType() {
-            const code = document.getElementById('shop-item-code').value;
-            const valInput = document.getElementById('shop-value');
-            const durInput = document.getElementById('shop-duration');
-            const label = document.getElementById('shop-value-label');
-
-            if (code === 'sun_pack') {
-                valInput.classList.add('hidden');
-                durInput.classList.remove('hidden');
-                label.innerText = "Thời hạn gói:";
-            } else {
-                valInput.classList.remove('hidden');
-                durInput.classList.add('hidden');
-                label.innerText = "Giá trị / Số lượng:";
-            }
-        }
-        // Logic UI cho Edit User Item Modal
-        function toggleCustomDuration() {
-            const val = document.getElementById('edit-item-duration-select').value;
-            const customInput = document.getElementById('edit-item-custom-days');
-            if (val === 'custom') customInput.classList.remove('hidden');
-            else customInput.classList.add('hidden');
-        }
-
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
     </script>
 </body>
