@@ -1,51 +1,11 @@
 import { auth, db } from "./firebase/config.js";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore"; // Thêm collection, query, orderBy
 import { buyShopItemWithLog } from "./firebase/auth.js";
 
-// === CẤU HÌNH DANH SÁCH VẬT PHẨM ===
-const SHOP_ITEMS = [
-    // --- SHOP VNCOIN (VIP) ---
-    {
-        id: "pack_coin_1",
-        name: "Gói Tân Thủ",
-        description: "Nhận ngay 5,000 Coin Game để mua cây.",
-        price: 10000,
-        currency: "VNCoin",
-        image: "assets/sun.png",
-        type: "coin",
-        value: 5000,
-        isHot: true,
-        shopType: "vncoin"
-    },
-    {
-        id: "item_plant_food_vip",
-        name: "Gói Thuốc Đại Gia",
-        description: "Mua 10 bình Plant Food để dùng trong game.",
-        price: 35000,
-        currency: "VNCoin",
-        image: "assets/pea.png",
-        type: "item",
-        itemCode: "plant_food",
-        amount: 10,
-        isHot: true,
-        shopType: "vncoin"
-    },
-    // --- SHOP COIN (THƯỜNG) ---
-    {
-        id: "item_plant_food_basic",
-        name: "Thuốc Tăng Lực",
-        description: "Mua 1 bình Plant Food bằng tiền cày game.",
-        price: 2000,
-        currency: "Coin",
-        image: "assets/pea.png",
-        type: "item",
-        itemCode: "plant_food",
-        amount: 1,
-        isHot: false,
-        shopType: "coin"
-    }
-];
+// [THAY ĐỔI] Không dùng danh sách cứng nữa.
+// Biến này sẽ chứa dữ liệu tải từ Firestore về.
+let SHOP_ITEMS = [];
 
 // === LOGIC HỆ THỐNG ===
 const vnCoinEl = document.getElementById('user-vncoin');
@@ -57,7 +17,22 @@ let userVNCoin = 0;
 let userCoin = 0;
 let currentShopType = "vncoin"; // Mặc định hiển thị Shop VNCoin
 
-// 1. Kiểm tra đăng nhập & Lắng nghe tiền
+// 1. Lắng nghe dữ liệu SHOP từ Firestore (Real-time)
+// Khi Admin thêm/sửa/xóa, hàm này tự chạy lại để cập nhật giao diện
+const q = query(collection(db, "shop_items"), orderBy("price", "asc"));
+onSnapshot(q, (snapshot) => {
+    SHOP_ITEMS = [];
+    snapshot.forEach((doc) => {
+        SHOP_ITEMS.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Nếu user đã đăng nhập, render lại ngay
+    if (currentUser) {
+        renderShopByType(currentShopType);
+    }
+});
+
+// 2. Kiểm tra đăng nhập & Lắng nghe tiền User
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user;
@@ -70,6 +45,7 @@ onAuthStateChanged(auth, (user) => {
                 vnCoinEl.innerText = userVNCoin.toLocaleString();
                 gameCoinEl.innerText = userCoin.toLocaleString();
                 
+                // Render lại khi tiền thay đổi (để cập nhật nút Mua/Không đủ tiền)
                 renderShopByType(currentShopType);
             }
         });
@@ -78,15 +54,17 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// 2. Render Giao diện Shop theo loại (VNCoin hoặc Coin)
+// 3. Render Giao diện Shop theo loại (VNCoin hoặc Coin)
 window.renderShopByType = function(type) {
     currentShopType = type;
     gridEl.innerHTML = "";
     
+    // Lọc sản phẩm theo loại Shop (vncoin hoặc coin)
+    // Lưu ý: Dữ liệu trên Firestore cần có trường 'shopType'
     const filteredItems = SHOP_ITEMS.filter(item => item.shopType === type);
     
     if (filteredItems.length === 0) {
-        gridEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px;">Sắp ra mắt vật phẩm mới...</div>';
+        gridEl.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #7f8c8d;">Chưa có vật phẩm nào được bày bán.</div>';
         return;
     }
 
@@ -98,20 +76,23 @@ window.renderShopByType = function(type) {
         const card = document.createElement('div');
         card.className = "product-card";
         
+        // Xử lý hiển thị ảnh (nếu link ảnh lỗi hoặc trống thì hiện hộp quà)
+        const imgHtml = (item.image && (item.image.startsWith('http') || item.image.startsWith('assets/')))
+            ? `<img src="${item.image}" alt="${item.name}" style="width:100px; height:100px; object-fit:contain;">`
+            : '<span style="font-size:3em;">🎁</span>';
+
         card.innerHTML = `
             ${item.isHot ? '<span class="badge-hot">HOT</span>' : ''}
             <div class="product-img">
-                ${item.image.endsWith('.png') || item.image.endsWith('.jpg') 
-                    ? `<img src="${item.image}" alt="${item.name}" style="width:100px; height:100px;">` 
-                    : '🎁'} 
+                ${imgHtml}
             </div>
             <div class="product-info">
                 <div>
                     <div class="product-name">${item.name}</div>
-                    <div class="product-desc">${item.description}</div>
+                    <div class="product-desc">${item.description || 'Không có mô tả'}</div>
                 </div>
                 <div>
-                    <div class="price-tag">${item.price.toLocaleString()} ${item.currency}</div>
+                    <div class="price-tag">${parseInt(item.price).toLocaleString()} ${item.currency}</div>
                     <button class="btn-buy" 
                         onclick="handleBuy('${item.id}')" 
                         ${canBuy ? '' : 'disabled'}>
@@ -124,14 +105,14 @@ window.renderShopByType = function(type) {
     });
 }
 
-// 3. Xử lý Mua Hàng
+// 4. Xử lý Mua Hàng
 window.handleBuy = async (itemId) => {
     if (!currentUser) return;
     
     const item = SHOP_ITEMS.find(i => i.id === itemId);
     if (!item) return;
 
-    if (!confirm(`Bạn có chắc muốn mua "${item.name}" với giá ${item.price.toLocaleString()} ${item.currency}?`)) return;
+    if (!confirm(`Bạn có chắc muốn mua "${item.name}" với giá ${parseInt(item.price).toLocaleString()} ${item.currency}?`)) return;
 
     loadingEl.style.display = 'flex';
 

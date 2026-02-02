@@ -4,16 +4,15 @@ import {
     signOut, 
     onAuthStateChanged,
     sendPasswordResetEmail,
-    GoogleAuthProvider, // [MỚI] Thêm Provider cho Google
-    signInWithPopup     // [MỚI] Thêm Popup đăng nhập
+    GoogleAuthProvider, 
+    signInWithPopup 
 } from "firebase/auth";
-// [CẬP NHẬT] Import thêm functions
 import { auth, db, functions } from "./config.js"; 
 import { 
     doc, getDoc, updateDoc, increment, setDoc, 
-    collection, query, where, getDocs, onSnapshot 
+    collection, query, where, getDocs, onSnapshot,
+    runTransaction, addDoc, serverTimestamp, orderBy, limit, arrayUnion
 } from 'firebase/firestore'; 
-// [CẬP NHẬT] Import httpsCallable để gọi Cloud Functions
 import { httpsCallable } from "firebase/functions";
 
 // --- HÀM MỚI: LẤY CẤU HÌNH HỆ THỐNG ---
@@ -51,6 +50,8 @@ export async function loginWithGoogle() {
                 phone: user.phoneNumber || "",
                 role: "user",
                 coins: starterCoins,
+                vn_coin: 0, // [MỚI] Khởi tạo VNCoin
+                item_plant_food_count: 0, // [MỚI] Khởi tạo số lượng item đặc biệt
                 inventory: [],
                 createdAt: new Date()
             });
@@ -78,6 +79,8 @@ export async function registerNewUser(email, password, phone) {
             phone: phone || "",
             role: "user",
             coins: starterCoins,
+            vn_coin: 0,
+            item_plant_food_count: 0,
             inventory: [],
             createdAt: new Date()
         });
@@ -172,7 +175,6 @@ export async function callBuyItem(itemId) {
 }
 
 // --- HÀM CŨ: addUserCoins ---
-// Vẫn giữ lại để tránh lỗi code cũ, nhưng nên hạn chế dùng nếu đã bật Security Rules chặn ghi đè Coin
 export async function addUserCoins(amount) {
     const user = auth.currentUser;
     if (!user) return null;
@@ -215,13 +217,7 @@ export async function verifyAndResetPassword(email, phone) {
     }
 }
 
-// --- [BỔ SUNG] Import cần thiết cho Transaction và Query ---
-import { 
-    runTransaction, addDoc, serverTimestamp, 
-    orderBy, limit 
-} from "firebase/firestore";
-
-// --- 1. HÀM GHI LOG HỆ THỐNG (Dùng chung cho cả Game và Shop) ---
+// --- 1. HÀM GHI LOG HỆ THỐNG ---
 export async function saveLog(uid, actionType, assetType, amount, note, oldBalance = 0, newBalance = 0) {
     try {
         await addDoc(collection(db, "transactions_history"), {
@@ -240,7 +236,7 @@ export async function saveLog(uid, actionType, assetType, amount, note, oldBalan
     }
 }
 
-// --- 2. HÀM MUA ĐỒ SHOP (Trừ VNCoin, Cộng đồ, Ghi Log) ---
+// --- 2. HÀM MUA ĐỒ SHOP (Xử lý thông minh cho VNCoin & Coin) ---
 export async function buyShopItemWithLog(uid, itemData) {
     const userRef = doc(db, "users", uid);
 
@@ -250,33 +246,55 @@ export async function buyShopItemWithLog(uid, itemData) {
             if (!userSnap.exists()) throw "User không tồn tại!";
 
             const userData = userSnap.data();
-            const currentVNCoin = userData.vn_coin || 0;
+            
+            // A. XÁC ĐỊNH LOẠI TIỀN CẦN TRỪ
+            // Nếu currency là "Coin" thì trừ coins, mặc định còn lại là trừ vn_coin
+            const currencyField = (itemData.currency === "Coin") ? "coins" : "vn_coin";
+            const currentBalance = userData[currencyField] || 0;
+            const price = parseInt(itemData.price);
 
-            // Kiểm tra tiền
-            if (currentVNCoin < itemData.price) {
-                throw "Số dư VNCoin không đủ!";
+            // Kiểm tra số dư
+            if (currentBalance < price) {
+                throw `Không đủ ${itemData.currency || 'VNCoin'}!`;
             }
 
-            const newVNCoin = currentVNCoin - itemData.price;
+            const newBalance = currentBalance - price;
 
-            // Cập nhật User: Trừ tiền, Thêm đồ
-            transaction.update(userRef, {
-                vn_coin: newVNCoin,
-                // Logic cộng item vào kho (dùng arrayUnion nếu là item, increment nếu là coin game)
-                // Ở đây ví dụ cộng item string code
-                inventory: arrayUnion(itemData.code) 
-            });
+            // B. CHUẨN BỊ DỮ LIỆU CẬP NHẬT
+            let updates = {
+                [currencyField]: newBalance // Trừ tiền
+            };
 
-            // Ghi Log ngay trong Transaction (để đảm bảo đồng bộ)
+            // C. XỬ LÝ "GIAO HÀNG" DỰA TRÊN TYPE
+            if (itemData.type === 'coin') {
+                // Nếu mua gói Coin -> Cộng Coin vào tài khoản game
+                // itemData.value chứa số lượng coin nhận được
+                updates.coins = increment(parseInt(itemData.value));
+            } 
+            else if (itemData.type === 'item') {
+                // Nếu mua vật phẩm (ví dụ Plant Food)
+                if (itemData.itemCode === 'plant_food') {
+                    // Cộng dồn số lượng vào field riêng
+                    updates.item_plant_food_count = increment(parseInt(itemData.amount || 1));
+                } else {
+                    // Vật phẩm khác (Skin, Cây) -> Thêm vào mảng inventory
+                    updates.inventory = arrayUnion(itemData.itemCode);
+                }
+            }
+
+            // D. THỰC HIỆN UPDATE DB
+            transaction.update(userRef, updates);
+
+            // E. GHI LOG GIAO DỊCH
             const logRef = doc(collection(db, "transactions_history"));
             transaction.set(logRef, {
                 uid: uid,
                 type: "BUY_SHOP",
-                assetType: "VNCoin",
-                amount: -itemData.price,
-                balanceBefore: currentVNCoin,
-                balanceAfter: newVNCoin,
-                note: `Mua vật phẩm: ${itemData.name}`,
+                assetType: itemData.currency || "VNCoin",
+                amount: -price,
+                balanceBefore: currentBalance,
+                balanceAfter: newBalance,
+                note: `Mua: ${itemData.name}`,
                 timestamp: serverTimestamp()
             });
         });
