@@ -397,9 +397,15 @@
                         <div class="form-group" id="group_bullet_skin">
                             <label>3. Ảnh Đạn (Bullet) - Folder: assets/pea</label>
                             <input type="file" id="file_bullet" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_bullet')">
+                             <div class="image-preview-container">
+                                <div class="img-preview-box"><img id="prev_bullet" src=""></div>
+                            </div>
                             
                             <label style="margin-top:10px;">4. Ảnh Skin (Buff) - Folder: assets/skin</label>
                             <input type="file" id="file_skin" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_skin')">
+                            <div class="image-preview-container">
+                                <div class="img-preview-box"><img id="prev_skin" src=""></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -424,20 +430,15 @@
     </div>
 
     <script type="module" src="src/admin.js"></script>
-    <script type="module" src="src/admin/dashboard.js"></script> <script>
+    <script type="module" src="src/admin/dashboard.js"></script>
+    <script>
         function switchTab(tabId) {
-            // Ẩn tất cả section
             document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
-            // Bỏ active tất cả menu
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-            
-            // Hiện section được chọn
             document.getElementById('section-' + tabId).classList.remove('hidden');
-            // Active menu được chọn
             document.getElementById('menu-' + tabId).classList.add('active');
         }
 
-        // Mở Modal Thêm Cây/Zombie
         window.openPlantModal = (type) => {
             const modal = document.getElementById('modal-game-data');
             const title = document.getElementById('game-data-title');
@@ -456,16 +457,16 @@
             } else {
                 title.innerText = "Thêm Zombie Mới";
                 typeSelect.value = "zombies";
-                bulletGroup.style.display = 'none'; // Zombie không cần đạn và skin (tạm thời)
+                bulletGroup.style.display = 'none'; 
             }
         };
 
-        // Hàm xem trước ảnh khi chọn file
         window.previewImage = (input, imgId) => {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    document.getElementById(imgId).src = e.target.result;
+                    const img = document.getElementById(imgId);
+                    if(img) img.src = e.target.result;
                 }
                 reader.readAsDataURL(input.files[0]);
             }
