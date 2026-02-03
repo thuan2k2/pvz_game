@@ -1,6 +1,6 @@
 // src/game/Resources.js
 
-// Khởi tạo các đối tượng ảnh TĨNH (Cũ)
+// Khởi tạo các đối tượng ảnh TĨNH (Load mặc định để game không bị crash khi chưa có mạng)
 export const images = {
     bg: new Image(),
     shooter: new Image(),
@@ -20,23 +20,29 @@ export const images = {
 export const customImages = {}; 
 
 // Hàm gán đường dẫn ảnh tĩnh (Chạy 1 lần khi game bắt đầu)
+// [FIX LỖI 404] Cập nhật đúng tên file và thư mục theo cấu trúc mới
 export function loadImages() {
     images.bg.src = '/assets/bg.jpg';
-    images.shooter.src = '/assets/plant/Peashooter.png'; // Cập nhật lại đường dẫn cho chuẩn folder mới
+    
+    // Cây (Folder: assets/plant) - Lưu ý viết hoa chữ cái đầu đúng như file của bạn
+    images.shooter.src = '/assets/plant/Peashooter.png'; 
+    images.sunflower.src = '/assets/plant/Sunflower.png'; 
     images.blocker.src = '/assets/plant/Wall-nut.png';
     images.blocker_gold.src = '/assets/plant/Wall-nut.png'; 
-    images.zombie.src = '/assets/zombie.png';
+    images.cherrybomb.src = '/assets/plant/Cherry Bomb.png'; // Có dấu cách
+
+    // Zombie (Folder: assets/zombie)
+    images.zombie.src = '/assets/zombie/Zombie.png';
+    images.conehead.src = '/assets/zombie/Conehead Zombie.png'; // Có dấu cách
+    images.buckethead.src = '/assets/zombie/Buckethead Zombie.png'; // Có dấu cách
+
+    // Đạn & Item khác
     images.pea.src = '/assets/pea/Pea.png';
     images.sun.src = '/assets/sun.png';
-    images.sunflower.src = '/assets/plant/Sunflower.png'; 
-    images.conehead.src = '/assets/zombie/Conehead Zombie.png';
-    images.buckethead.src = '/assets/zombie/Buckethead Zombie.png';
-    images.cherrybomb.src = '/assets/plant/Cherry Bomb.png';
     images.lawnmower.src = '/assets/lawnmower.png'; 
 }
 
 // [MỚI] Hàm tải ảnh động dựa trên dữ liệu PLANT_DATA
-// Hàm này sẽ được gọi từ Main.js sau khi tải dữ liệu từ Server xong
 export function loadDynamicResources(plantData) {
     console.log("🔄 Đang tải tài nguyên hình ảnh động...");
     
@@ -44,13 +50,12 @@ export function loadDynamicResources(plantData) {
         // 1. Tải ảnh Cây (Plant)
         if (data.assets && data.assets.plant) {
             const img = new Image();
-            // Nếu là link online (Firebase) thì dùng luôn, nếu là tên file thì nối đường dẫn local
             const src = data.assets.plant.startsWith('http') 
                 ? data.assets.plant 
                 : `/assets/plant/${data.assets.plant}`;
             
             img.src = src;
-            customImages[id] = img; // Lưu với key là ID cây (vd: 'peashooter')
+            customImages[id] = img; 
         }
 
         // 2. Tải ảnh Đạn (Bullet)
@@ -61,7 +66,7 @@ export function loadDynamicResources(plantData) {
                 : `/assets/pea/${data.assets.bullet}`;
             
             img.src = src;
-            customImages[`bullet_${id}`] = img; // Lưu với key: 'bullet_peashooter'
+            customImages[`bullet_${id}`] = img; 
         }
 
         // 3. Tải ảnh Skin (Nếu có)
@@ -72,7 +77,7 @@ export function loadDynamicResources(plantData) {
                 : `/assets/skin/${data.assets.skin}`;
             
             img.src = src;
-            customImages[`skin_${id}`] = img; // Lưu với key: 'skin_peashooter'
+            customImages[`skin_${id}`] = img; 
         }
     }
     console.log("✅ Đã nạp xong tài nguyên ảnh động:", Object.keys(customImages).length, "ảnh.");
@@ -80,14 +85,11 @@ export function loadDynamicResources(plantData) {
 
 /**
  * Hàm hỗ trợ vẽ an toàn
- * Nếu ảnh chưa tải xong hoặc bị lỗi -> Vẽ hình vuông màu như cũ (fallback)
  */
 export function drawSprite(ctx, img, x, y, w, h, fallbackColor = 'red') {
     if (img && img.complete && img.naturalWidth !== 0) {
-        // Nếu ảnh đã tải xong -> Vẽ ảnh
         ctx.drawImage(img, x, y, w, h);
     } else {
-        // Nếu chưa có ảnh -> Vẽ màu tạm
         ctx.fillStyle = fallbackColor;
         ctx.fillRect(x, y, w, h);
     }

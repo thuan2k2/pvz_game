@@ -1,20 +1,19 @@
 // src/firebase/config.js
 
-// Import các hàm cần thiết từ thư viện Firebase
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-// [MỚI] Import Functions để gọi hàm từ Server
 import { getFunctions } from "firebase/functions"; 
-// [MỚI - CẬP NHẬT] Import thêm Storage (Lưu ảnh) và Realtime Database (Lưu thông số game)
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
 
-// Cấu hình Firebase (Lấy từ Firebase Console của bạn)
 const firebaseConfig = {
-  apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",             // Ví dụ: AIzaSyD...
+  apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",
   authDomain: "plans-game.firebaseapp.com",
-  databaseURL: "https://plans-game-default-rtdb.firebaseio.com",
+  
+  // [QUAN TRỌNG] Dòng này để sửa lỗi Warning màu vàng trong ảnh
+  databaseURL: "https://plans-game-default-rtdb.firebaseio.com", 
+  
   projectId: "plans-game",
   storageBucket: "plans-game.firebasestorage.app",
   messagingSenderId: "480122242241",
@@ -24,13 +23,10 @@ const firebaseConfig = {
 // Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
 
-// Xuất các công cụ để dùng ở file khác
-export const auth = getAuth(app);       // Quản lý đăng nhập/đăng ký
-export const db = getFirestore(app);    // Quản lý cơ sở dữ liệu người chơi (Firestore)
-export const functions = getFunctions(app); // [MỚI] Quản lý Cloud Functions
-
-// [MỚI - CẬP NHẬT] Xuất công cụ cho Admin Tool
-export const storage = getStorage(app); // Quản lý kho ảnh (Storage)
-export const database = getDatabase(app); // Quản lý thông số Game (Realtime Database)
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const functions = getFunctions(app);
+export const storage = getStorage(app);
+export const database = getDatabase(app);
 
 console.log("🔥 Firebase đã được kết nối!");
