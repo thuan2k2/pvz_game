@@ -49,7 +49,8 @@ onAuthStateChanged(auth, (user) => {
                     if (activeTab.id === 'section-vncoin') renderShopByType('vncoin');
                     else if (activeTab.id === 'section-coin') renderShopByType('coin');
                     else if (activeTab.id === 'section-inventory') renderInventory();
-                    else if (activeTab.id === 'section-deposit') renderDeposit(); // [MỚI]
+                    else if (activeTab.id === 'section-deposit') renderDeposit();
+                    else if (activeTab.id === 'section-deposit-history') renderDepositHistory(); // [MỚI]
                 } else {
                     renderShopByType('vncoin');
                 }
@@ -60,7 +61,54 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// [MỚI] HÀM RENDER NẠP TIỀN (SEPAY)
+// [MỚI] RENDER LỊCH SỬ NẠP TIỀN
+window.renderDepositHistory = async function() {
+    const tbody = document.getElementById('deposit-history-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">Đang tải dữ liệu...</td></tr>';
+
+    if (!currentUser) return;
+
+    try {
+        // Query tìm các giao dịch nạp tiền (DEPOSIT_SEPAY)
+        const q = query(
+            collection(db, "transactions_history"),
+            where("uid", "==", currentUser.uid),
+            where("type", "==", "DEPOSIT_SEPAY"), 
+            orderBy("timestamp", "desc"),
+            limit(20)
+        );
+        
+        const snapshot = await getDocs(q);
+        tbody.innerHTML = "";
+
+        if(snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#bdc3c7;">Chưa có giao dịch nạp tiền nào.</td></tr>';
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
+            const note = data.note || "Nạp tiền qua SePay";
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td style="color:#bdc3c7; font-size:0.9em;">${date}</td>
+                    <td style="color:#f1c40f; font-weight:bold;">+${parseInt(data.amount).toLocaleString()}</td>
+                    <td>${note}</td>
+                    <td class="status-success">Thành công</td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:red;">Lỗi tải dữ liệu (Vui lòng báo Admin tạo Index).</td></tr>';
+    }
+}
+
+// HÀM RENDER NẠP TIỀN (SEPAY)
 window.renderDeposit = function() {
     const container = document.getElementById('deposit-container');
     if (!currentUser) {
@@ -68,16 +116,12 @@ window.renderDeposit = function() {
         return;
     }
 
-    // THÔNG TIN TÀI KHOẢN (Thay đổi theo STK của bạn)
-    const BANK_BIN = "970423"; // TPBank (Tien Phong Bank)
-    const BANK_ACC = "00006464313"; // Số tài khoản (Trùng khớp với API Key SePay để dễ quản lý)
-    const ACCOUNT_NAME = "PHAM DUC THUAN"; // Tên chủ tài khoản
-    const AMOUNT = 0; // Để 0 để người dùng tự nhập
-    
-    // CÚ PHÁP: NAP + UID
+    const BANK_BIN = "970423"; 
+    const BANK_ACC = "00006464313"; 
+    const ACCOUNT_NAME = "PHAM DUC THUAN"; 
+    const AMOUNT = 0; 
     const TRANSFER_CONTENT = `NAP ${currentUser.uid}`; 
 
-    // Tạo QR Code VietQR
     const qrSrc = `https://img.vietqr.io/image/${BANK_BIN}-${BANK_ACC}-compact2.png?amount=${AMOUNT}&addInfo=${encodeURIComponent(TRANSFER_CONTENT)}&accountName=${encodeURIComponent(ACCOUNT_NAME)}`;
 
     container.innerHTML = `
@@ -99,7 +143,7 @@ window.renderDeposit = function() {
                 </ul>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-                    <div>🏦 Ngân hàng: <strong style="color:#2ecc71;">TPBank (Tiên Phong Bank)</strong></div>
+                    <div>🏦 Ngân hàng: <strong style="color:#2ecc71;">TPBank</strong></div>
                     <div>💳 Số tài khoản: <strong style="color:#2ecc71;">${BANK_ACC}</strong></div>
                     <div style="grid-column: 1/-1;">👤 Chủ tài khoản: <strong>${ACCOUNT_NAME}</strong></div>
                 </div>
@@ -273,7 +317,7 @@ window.handleToggle = async (itemCode, newState) => {
     await toggleItemStatus(currentUser.uid, itemCode, newState);
 };
 
-// 5. Render Lịch Sử
+// 5. Render Lịch Sử MUA HÀNG (Cũ)
 window.renderHistory = async function() {
     const tbody = document.getElementById('history-body');
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải dữ liệu...</td></tr>';

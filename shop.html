@@ -56,10 +56,11 @@
         .inv-count { font-size: 1.5em; font-weight: bold; color: #f1c40f; }
 
         /* HISTORY TABLE */
-        .history-table { width: 100%; border-collapse: collapse; background: #252525; border-radius: 10px; overflow: hidden; }
+        .history-table { width: 100%; border-collapse: collapse; background: #252525; border-radius: 10px; overflow: hidden; margin-top: 10px; }
         .history-table th, .history-table td { padding: 15px; text-align: left; border-bottom: 1px solid #444; }
         .history-table th { background: #2c3e50; color: #bdc3c7; }
         .history-table tr:hover { background: #2c3e50; }
+        .status-success { color: #2ecc71; font-weight: bold; }
 
         /* OVERLAY */
         .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; z-index: 950; }
@@ -75,12 +76,13 @@
     <div id="sidebar" class="sidebar">
         <div class="sidebar-item active" onclick="switchSection('vncoin', this)">🟡 Shop VNCoin</div>
         <div class="sidebar-item" onclick="switchSection('coin', this)">💵 Shop Coin</div>
-        <hr style="border: 0.5px solid #444; margin: 15px 0;">
         <div class="sidebar-item" onclick="switchSection('deposit', this)">💳 Nạp VNCoin</div>
-        <div class="sidebar-item" onclick="switchSection('deposit', this)">✅ Lịch sử giao dịch VNCoin</div>
+        
+        <div class="sidebar-item" onclick="switchSection('deposit-history', this)">✅ Lịch sử giao dịch VNCoin</div>
+        
         <hr style="border: 0.5px solid #444; margin: 15px 0;">
         <div class="sidebar-item" onclick="switchSection('inventory', this)">🎒 Kho Đồ</div>
-        <div class="sidebar-item" onclick="switchSection('history', this)">📜 Lịch sử mua</div>
+        <div class="sidebar-item" onclick="switchSection('history', this)">📜 Lịch sử mua hàng</div>
         <hr style="border: 0.5px solid #444; margin: 15px 0;">
         <a href="index.html" class="sidebar-item" style="text-decoration: none;">🏠 Quay về Game</a>
     </div>
@@ -109,14 +111,25 @@
             <div id="deposit-container"></div>
         </div>
 
+        <div id="section-deposit-history" class="shop-section">
+            <h2 style="color:#e67e22; margin-bottom: 20px;">Lịch sử nạp VNCoin</h2>
+            <div style="overflow-x:auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr><th>Thời gian</th><th>Số tiền nạp</th><th>Nội dung</th><th>Trạng thái</th></tr>
+                    </thead>
+                    <tbody id="deposit-history-body"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="section-inventory" class="shop-section">
             <h2 style="color:#3498db; margin-bottom: 20px;">Túi đồ của bạn</h2>
-            <div id="inventory-container" class="inventory-list">
-                </div>
+            <div id="inventory-container" class="inventory-list"></div>
         </div>
 
         <div id="section-history" class="shop-section">
-            <h2 style="color:#95a5a6; margin-bottom: 20px;">Lịch sử giao dịch gần đây</h2>
+            <h2 style="color:#95a5a6; margin-bottom: 20px;">Lịch sử mua sắm</h2>
             <table class="history-table">
                 <thead>
                     <tr><th>Thời gian</th><th>Sản phẩm</th><th>Giá</th></tr>
@@ -134,28 +147,25 @@
         }
 
         function switchSection(type, el) {
-            // UI Update
             document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
             el.classList.add('active');
             
             document.querySelectorAll('.shop-section').forEach(sec => sec.classList.remove('active'));
             document.getElementById('section-' + type).classList.add('active');
 
-            // Logic gọi hàm render tương ứng
-            if (type === 'vncoin' || type === 'coin') {
-                document.getElementById('section-title').innerText = type === 'vncoin' ? "SHOP VNCOIN" : "SHOP COIN";
-                if(window.renderShopByType) window.renderShopByType(type);
-            } else if (type === 'inventory') {
-                document.getElementById('section-title').innerText = "KHO ĐỒ";
-                if(window.renderInventory) window.renderInventory();
-            } else if (type === 'history') {
-                document.getElementById('section-title').innerText = "LỊCH SỬ MUA";
-                if(window.renderHistory) window.renderHistory();
-            } else if (type === 'deposit') {
-                // [MỚI] XỬ LÝ KHI BẤM NẠP VNCOIN
-                document.getElementById('section-title').innerText = "NẠP VNCOIN";
-                if(window.renderDeposit) window.renderDeposit();
+            // Xử lý tiêu đề và render
+            const titleEl = document.getElementById('section-title');
+            
+            if (type === 'vncoin') { titleEl.innerText = "SHOP VNCOIN"; if(window.renderShopByType) window.renderShopByType('vncoin'); }
+            else if (type === 'coin') { titleEl.innerText = "SHOP COIN"; if(window.renderShopByType) window.renderShopByType('coin'); }
+            else if (type === 'deposit') { titleEl.innerText = "NẠP VNCOIN"; if(window.renderDeposit) window.renderDeposit(); }
+            else if (type === 'deposit-history') { 
+                titleEl.innerText = "LỊCH SỬ NẠP"; 
+                if(window.renderDepositHistory) window.renderDepositHistory(); // Gọi hàm mới trong shop.js
             }
+            else if (type === 'inventory') { titleEl.innerText = "KHO ĐỒ"; if(window.renderInventory) window.renderInventory(); }
+            else if (type === 'history') { titleEl.innerText = "LỊCH SỬ MUA"; if(window.renderHistory) window.renderHistory(); }
+            
             toggleMenu();
         }
     </script>

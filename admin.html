@@ -61,9 +61,32 @@
         .header h1 { margin: 0; color: #2c3e50; font-size: 1.5em; }
         .search-input { padding: 12px 20px; width: 350px; border: 1px solid #ddd; border-radius: 30px; outline: none; background: #f9f9f9; }
         
-        .stats-cards { display: flex; gap: 30px; margin-bottom: 40px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); flex: 1; text-align: center; border-left: 5px solid #3498db; }
-        .card:last-child { border-left-color: #27ae60; }
+        /* [CẬP NHẬT] CSS cho phần thẻ thống kê để chứa 5 thẻ */
+        .stats-cards { 
+            display: flex; 
+            gap: 20px; 
+            margin-bottom: 40px; 
+            flex-wrap: wrap; /* Cho phép xuống dòng */
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            flex: 1 1 18%; /* Độ rộng khoảng 20% màn hình */
+            min-width: 200px; /* Không nhỏ quá */
+            text-align: center; 
+            border-left: 5px solid #3498db; 
+        }
+        /* Màu sắc riêng cho từng thẻ */
+        .card:nth-child(1) { border-left-color: #3498db; } /* Tổng User */
+        .card:nth-child(2) { border-left-color: #27ae60; } /* Tổng Coin */
+        .card:nth-child(3) { border-left-color: #e67e22; } /* Coin đã dùng */
+        .card:nth-child(4) { border-left-color: #f1c40f; } /* Tổng VNCoin */
+        .card:nth-child(5) { border-left-color: #c0392b; } /* VNCoin đã dùng */
+        
+        .card h3 { font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; }
+        .card p { font-size: 1.5em; font-weight: bold; color: #2c3e50; margin: 0; }
 
         /* Table */
         .table-container { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; margin-bottom: 40px; }
@@ -124,10 +147,30 @@
                 <h1>Quản lý tài khoản</h1>
                 <input type="text" id="search-box" class="search-input" placeholder="🔍 Tìm kiếm theo email...">
             </div>
+            
             <div class="stats-cards">
-                <div class="card"><h3>Tổng Người Chơi</h3><p id="total-users">...</p></div>
-                <div class="card"><h3>Tổng Coin Server</h3><p id="total-coins">...</p></div>
+                <div class="card">
+                    <h3>Tổng Người Chơi</h3>
+                    <p id="total-users">...</p>
+                </div>
+                <div class="card">
+                    <h3>Tổng Coin (Server)</h3>
+                    <p id="total-coins">...</p>
+                </div>
+                <div class="card">
+                    <h3>Tổng Coin Đã Dùng</h3>
+                    <p id="total-coins-used">...</p>
+                </div>
+                <div class="card">
+                    <h3>Tổng VNCoin (Server)</h3>
+                    <p id="total-vncoins">...</p>
+                </div>
+                <div class="card">
+                    <h3>VNCoin Đã Dùng</h3>
+                    <p id="total-vncoins-used">...</p>
+                </div>
             </div>
+
             <div class="table-container">
                 <table class="admin-table">
                     <thead><tr><th>Email</th><th>SĐT</th><th>Coin</th><th>VNCoin</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
