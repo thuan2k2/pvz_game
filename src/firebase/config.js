@@ -14,6 +14,7 @@ import { getDatabase } from "firebase/database";
 const firebaseConfig = {
   apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",             // Ví dụ: AIzaSyD...
   authDomain: "plans-game.firebaseapp.com",
+  databaseURL: "https://plans-game-default-rtdb.firebaseio.com",
   projectId: "plans-game",
   storageBucket: "plans-game.firebasestorage.app",
   messagingSenderId: "480122242241",
