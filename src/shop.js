@@ -99,7 +99,7 @@ window.renderDeposit = function() {
                 </ul>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
-                    <div>🏦 Ngân hàng: <strong style="color:#2ecc71;">MBBank</strong></div>
+                    <div>🏦 Ngân hàng: <strong style="color:#2ecc71;">TPBank (Tiên Phong Bank)</strong></div>
                     <div>💳 Số tài khoản: <strong style="color:#2ecc71;">${BANK_ACC}</strong></div>
                     <div style="grid-column: 1/-1;">👤 Chủ tài khoản: <strong>${ACCOUNT_NAME}</strong></div>
                 </div>
