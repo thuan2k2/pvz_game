@@ -3,7 +3,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getFunctions } from "firebase/functions"; 
+import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 import { getDatabase } from "firebase/database";
 
@@ -11,8 +11,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",
   authDomain: "plans-game.firebaseapp.com",
   
-  // [QUAN TRỌNG] Dòng này để sửa lỗi Warning màu vàng trong ảnh
-  databaseURL: "https://plans-game-default-rtdb.firebaseio.com", 
+  // [QUAN TRỌNG] Dòng này sửa lỗi Warning màu vàng:
+  databaseURL: "https://plans-game-default-rtdb.firebaseio.com",
   
   projectId: "plans-game",
   storageBucket: "plans-game.firebasestorage.app",
@@ -20,7 +20,6 @@ const firebaseConfig = {
   appId: "1:480122242241:web:bc5c31438e5298a985c040"
 };
 
-// Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
