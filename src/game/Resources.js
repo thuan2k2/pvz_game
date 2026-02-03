@@ -18,41 +18,45 @@ export const images = {
 export const customImages = {};
 
 export function loadImages() {
-    // 1. Ảnh nền & Vật phẩm chung (Nằm ngay trong assets/)
+    // 1. Ảnh nền & Vật phẩm chung
     images.bg.src = '/assets/bg.jpg';
     images.sun.src = '/assets/sun.png'; 
     images.lawnmower.src = '/assets/lawnmower.png';
 
-    // 2. Cây trồng (Nằm trong assets/plant/) - CHÚ Ý VIẾT HOA CHỮ CÁI ĐẦU
+    // 2. Cây trồng (Folder: assets/plant) - Đã fix đường dẫn
     images.shooter.src = '/assets/plant/Peashooter.png';
     images.sunflower.src = '/assets/plant/Sunflower.png';
     images.blocker.src = '/assets/plant/Wall-nut.png';
     images.blocker_gold.src = '/assets/plant/Wall-nut.png'; 
-    images.cherrybomb.src = '/assets/plant/Cherry Bomb.png'; // Tên có dấu cách
+    images.cherrybomb.src = '/assets/plant/Cherry Bomb.png'; 
 
-    // 3. Zombie (Nằm trong assets/zombie/)
+    // 3. Zombie (Folder: assets/zombie)
     images.zombie.src = '/assets/zombie/Zombie.png';
-    // Tạm thời trỏ Conehead vào Zombie thường nếu chưa có ảnh riêng, hoặc sửa tên file nếu có
-    images.conehead.src = '/assets/zombie/Zombie.png'; 
+    images.conehead.src = '/assets/zombie/Conehead Zombie.png'; 
     images.buckethead.src = '/assets/zombie/Buckethead Zombie.png';
 
-    // 4. Đạn (Nằm trong assets/pea/)
+    // 4. Đạn (Folder: assets/pea)
     images.pea.src = '/assets/pea/Pea.png';
 }
 
-// Hàm tải ảnh động từ Admin/Firebase
+// Hàm tải ảnh động từ Admin/Firebase (Đã thêm kiểm tra an toàn)
 export function loadDynamicResources(plantData) {
+    if (!plantData) return; // [An toàn] Nếu chưa có data thì bỏ qua
+
     console.log("🔄 Đang tải tài nguyên hình ảnh động...");
+    
     for (const [id, data] of Object.entries(plantData)) {
+        // Tải ảnh Cây
         if (data.assets && data.assets.plant) {
             const img = new Image();
-            // Nếu là link online thì dùng luôn, nếu không thì tự nối chuỗi
             const src = data.assets.plant.startsWith('http') 
                 ? data.assets.plant 
                 : `/assets/plant/${data.assets.plant}`;
             img.src = src;
             customImages[id] = img;
         }
+        
+        // Tải ảnh Đạn
         if (data.assets && data.assets.bullet) {
             const img = new Image();
             const src = data.assets.bullet.startsWith('http') 
@@ -61,6 +65,8 @@ export function loadDynamicResources(plantData) {
             img.src = src;
             customImages[`bullet_${id}`] = img;
         }
+        
+        // Tải ảnh Skin
         if (data.assets && data.assets.skin) {
             const img = new Image();
             const src = data.assets.skin.startsWith('http') 

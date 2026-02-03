@@ -10,18 +10,18 @@ import { getDatabase } from "firebase/database";
 const firebaseConfig = {
   apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",
   authDomain: "plans-game.firebaseapp.com",
-  
-  // [QUAN TRỌNG] Dòng này sửa lỗi Warning màu vàng:
+  // Đường dẫn kết nối Realtime Database (Bắt buộc để sửa lỗi Warning)
   databaseURL: "https://plans-game-default-rtdb.firebaseio.com",
-  
   projectId: "plans-game",
   storageBucket: "plans-game.firebasestorage.app",
   messagingSenderId: "480122242241",
   appId: "1:480122242241:web:bc5c31438e5298a985c040"
 };
 
+// Khởi tạo Firebase
 const app = initializeApp(firebaseConfig);
 
+// Xuất các module để sử dụng trong game
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
