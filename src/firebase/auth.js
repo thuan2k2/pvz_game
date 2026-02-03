@@ -50,8 +50,8 @@ export async function loginWithGoogle() {
                 coins: starterCoins,
                 vn_coin: 0, 
                 item_plant_food_count: 0,
-                item_broadcast_count: 0, // [MỚI] Thêm trường đếm thẻ đại gia
-                broadcast_queue: [], // [MỚI] Hàng đợi tên gói hàng giá trị cao
+                item_broadcast_count: 0, // [MỚI] Thẻ đại gia
+                broadcast_queue: [], // [MỚI] Hàng đợi tên gói
                 inventory: [],
                 createdAt: new Date()
             });
@@ -81,8 +81,8 @@ export async function registerNewUser(email, password, phone) {
             coins: starterCoins,
             vn_coin: 0,
             item_plant_food_count: 0,
-            item_broadcast_count: 0,
-            broadcast_queue: [],
+            item_broadcast_count: 0, // [MỚI]
+            broadcast_queue: [], // [MỚI]
             inventory: [],
             createdAt: new Date()
         });

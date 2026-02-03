@@ -1,7 +1,8 @@
 import { monitorAuthState, logoutUser, listenToUserData } from './firebase/auth.js';
 import { auth, db } from './firebase/config.js'; 
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore'; 
+// [CẬP NHẬT] Thêm các hàm query Firestore cần thiết
+import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'; 
 import { GameCore } from './game/GameCore.js';
 import { loadImages } from './game/Resources.js';
 
@@ -36,6 +37,23 @@ let currentState = {
 // --- 1. LOGIC AUTH & REALTIME UPDATE ---
 monitorAuthState(async (user) => {
     
+    // [MỚI] LẮNG NGHE THÔNG BÁO ĐẠI GIA (SERVER BROADCAST)
+    // Lấy tin nhắn mới nhất
+    const qBroadcast = query(collection(db, "server_broadcasts"), orderBy("timestamp", "desc"), limit(1));
+    onSnapshot(qBroadcast, (snapshot) => {
+        if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            // Chỉ hiện nếu tin nhắn mới (trong vòng 15 giây qua) để tránh hiện lại tin cũ khi F5
+            if (data.timestamp) {
+                const now = new Date().getTime();
+                const msgTime = data.timestamp.toMillis();
+                if (now - msgTime < 15000) { 
+                    showBigSpenderEffect(data.message);
+                }
+            }
+        }
+    });
+
     // Lắng nghe Config hệ thống
     if (!unsubscribeSystem) {
         unsubscribeSystem = onSnapshot(doc(db, "system_config", "general"), (docSnap) => {
@@ -122,6 +140,42 @@ monitorAuthState(async (user) => {
 
     initGame();
 });
+
+// [MỚI] HÀM HIỂN THỊ HIỆU ỨNG ĐẠI GIA (CHẠY CHỮ)
+function showBigSpenderEffect(message) {
+    // Kiểm tra nếu đã có element thì dùng lại, chưa có thì tạo mới
+    let marquee = document.getElementById('vip-marquee');
+    if (!marquee) {
+        marquee = document.createElement('div');
+        marquee.id = 'vip-marquee';
+        // Style sang chảnh: Gradient đỏ vàng, chữ vàng kim
+        marquee.style.cssText = `
+            position: fixed; top: 80px; left: 0; width: 100%;
+            background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(192, 57, 43, 0.9) 20%, rgba(192, 57, 43, 0.9) 80%, rgba(0,0,0,0) 100%);
+            color: #f1c40f; font-weight: bold; font-size: 1.8em; text-shadow: 2px 2px 4px #000;
+            padding: 15px 0; z-index: 9999; text-align: center;
+            white-space: nowrap; pointer-events: none;
+            font-family: 'Segoe UI', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        `;
+        document.body.appendChild(marquee);
+    }
+
+    // Nội dung thông báo
+    marquee.innerHTML = `📢 💎 VIP ALERT: ${message} 💎`;
+    
+    // Reset vị trí để bắt đầu chạy
+    marquee.style.transition = 'none';
+    marquee.style.transform = 'translateX(100%)'; // Bắt đầu từ bên phải ngoài màn hình
+    
+    // Trigger animation (Chạy từ phải sang trái)
+    // Thời gian chạy 12s cho chậm rãi để mọi người kịp đọc
+    setTimeout(() => {
+        marquee.style.transition = 'transform 12s linear';
+        marquee.style.transform = 'translateX(-100%)'; // Chạy sang bên trái ngoài màn hình
+    }, 100);
+}
 
 // --- HÀM KÍCH HOẠT CHẾ ĐỘ KHÁCH ---
 function activeGuestMode() {

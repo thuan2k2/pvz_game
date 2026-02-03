@@ -32,7 +32,7 @@ async function loadSystemConfig() {
             
             const maintMode = document.getElementById('maintenance-mode');
             const maintMsg = document.getElementById('maintenance-msg');
-            const maintDuration = document.getElementById('maintenance-duration'); // [FIX] Đã có trong HTML
+            const maintDuration = document.getElementById('maintenance-duration'); 
             
             if (maintMode) maintMode.value = data.maintenance ? "true" : "false";
             if (maintMsg) maintMsg.value = data.maintenance_message || "";
@@ -323,6 +323,7 @@ window.showUserDetail = async (uid) => {
 
     let invHtml = '';
 
+    // 1. Plant Food
     if (u.item_plant_food_count !== undefined) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #2ecc71;">
@@ -335,6 +336,19 @@ window.showUserDetail = async (uid) => {
         `;
     }
 
+    // [MỚI] 2. Thẻ Đại Gia Tiêu Sản (item_broadcast_count)
+    const broadcastCount = u.item_broadcast_count || 0;
+    invHtml += `
+        <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #e74c3c;">
+            <div>
+                <strong>📢 Thẻ Đại Gia Tiêu Sản</strong><br>
+                <span style="color:#7f8c8d; font-size:0.9em;">Số lượng: <b>${broadcastCount}</b></span>
+            </div>
+            <button class="btn btn-edit" style="font-size:0.8em;" onclick="openEditUserItem('${uid}', 'broadcast_card', 'quantity', ${broadcastCount})">✏️ Sửa</button>
+        </div>
+    `;
+
+    // 3. Gói Mặt Trời
     if (u.inventory && u.inventory.includes('sun_pack')) {
         invHtml += `
             <div style="margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; background:white; padding:8px; border-radius:4px; border-left:4px solid #f1c40f;">
@@ -385,15 +399,15 @@ window.showUserDetail = async (uid) => {
     }
 };
 
+// [CẬP NHẬT] HÀM MỞ MODAL SỬA
 window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     editingUserUid = uid;
     editingItemKey = itemKey;
     editingItemType = type;
 
     const modal = document.getElementById('modal-edit-player-item');
-    // [FIX: Kiểm tra modal tồn tại]
     if (!modal) {
-        alert("Lỗi: Không tìm thấy modal sửa item! Hãy tải lại trang hoặc kiểm tra file admin.html.");
+        alert("Lỗi: Không tìm thấy modal sửa item!");
         return;
     }
 
@@ -402,7 +416,11 @@ window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     const durGroup = document.getElementById('edit-duration-group');
 
     modal.classList.remove('hidden');
-    nameEl.innerText = itemKey === 'plant_food' ? "Thuốc Tăng Lực" : "Gói Mặt Trời";
+    
+    // Set tên hiển thị cho đúng loại item
+    if (itemKey === 'plant_food') nameEl.innerText = "Thuốc Tăng Lực";
+    else if (itemKey === 'broadcast_card') nameEl.innerText = "Thẻ Đại Gia Tiêu Sản"; // [MỚI]
+    else nameEl.innerText = "Gói Mặt Trời";
 
     if (type === 'quantity') {
         qtyGroup.classList.remove('hidden');
@@ -416,14 +434,26 @@ window.openEditUserItem = (uid, itemKey, type, currentValue) => {
     }
 };
 
+// [CẬP NHẬT] HÀM LƯU SỬA (Submit)
 window.submitEditUserItem = async () => {
     const userRef = doc(db, "users", editingUserUid);
     try {
         if (editingItemType === 'quantity') {
             const newQty = parseInt(document.getElementById('edit-item-qty').value);
             if (isNaN(newQty) || newQty < 0) return alert("Số lượng không hợp lệ!");
-            await updateDoc(userRef, { item_plant_food_count: newQty });
-            await saveLog(editingUserUid, "ADMIN_EDIT", "Item", 0, `Admin chỉnh Plant Food thành: ${newQty}`);
+            
+            // Xử lý theo loại item
+            if (editingItemKey === 'plant_food') {
+                await updateDoc(userRef, { item_plant_food_count: newQty });
+                await saveLog(editingUserUid, "ADMIN_EDIT", "Item", 0, `Admin chỉnh Plant Food thành: ${newQty}`);
+            }
+            else if (editingItemKey === 'broadcast_card') { // [MỚI]
+                // Cập nhật số lượng thẻ
+                // Lưu ý: Nếu admin add thẻ thủ công, mảng broadcast_queue sẽ không có tên gói hàng.
+                // Khi user dùng, hệ thống sẽ tự lấy tên mặc định (xem logic trong auth.js).
+                await updateDoc(userRef, { item_broadcast_count: newQty });
+                await saveLog(editingUserUid, "ADMIN_EDIT", "Item", 0, `Admin chỉnh Thẻ Đại Gia thành: ${newQty}`);
+            }
         } 
         else if (editingItemType === 'duration') {
             const action = document.getElementById('edit-item-duration-select').value;

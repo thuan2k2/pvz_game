@@ -3,7 +3,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { 
     doc, onSnapshot, collection, query, orderBy, limit, getDocs, where 
 } from "firebase/firestore"; 
-import { buyShopItemWithLog, toggleItemStatus } from "./firebase/auth.js"; 
+import { buyShopItemWithLog, toggleItemStatus, useBigSpenderCard } from "./firebase/auth.js"; 
 
 // Biến toàn cục
 let SHOP_ITEMS = [];
@@ -27,8 +27,10 @@ onSnapshot(qShop, (snapshot) => {
     // Vẽ lại nếu đang ở tab shop
     if(currentUser) {
         const activeTab = document.querySelector('.shop-section.active');
-        if(activeTab && activeTab.id === 'section-vncoin') renderShopByType('vncoin');
-        if(activeTab && activeTab.id === 'section-coin') renderShopByType('coin');
+        if(activeTab) {
+            if(activeTab.id === 'section-vncoin') renderShopByType('vncoin');
+            if(activeTab.id === 'section-coin') renderShopByType('coin');
+        }
     }
 });
 
@@ -40,17 +42,16 @@ onAuthStateChanged(auth, (user) => {
             if (doc.exists()) {
                 userData = doc.data(); 
                 
-                vnCoinEl.innerText = (userData.vn_coin || 0).toLocaleString();
-                gameCoinEl.innerText = (userData.coins || 0).toLocaleString();
+                if(vnCoinEl) vnCoinEl.innerText = (userData.vn_coin || 0).toLocaleString();
+                if(gameCoinEl) gameCoinEl.innerText = (userData.coins || 0).toLocaleString();
                 
-                // Vẽ lại màn hình hiện tại
                 const activeTab = document.querySelector('.shop-section.active');
                 if(activeTab) {
                     if (activeTab.id === 'section-vncoin') renderShopByType('vncoin');
                     else if (activeTab.id === 'section-coin') renderShopByType('coin');
                     else if (activeTab.id === 'section-inventory') renderInventory();
                     else if (activeTab.id === 'section-deposit') renderDeposit();
-                    else if (activeTab.id === 'section-deposit-history') renderDepositHistory(); // [MỚI]
+                    else if (activeTab.id === 'section-deposit-history') renderDepositHistory();
                 } else {
                     renderShopByType('vncoin');
                 }
@@ -71,7 +72,6 @@ window.renderDepositHistory = async function() {
     if (!currentUser) return;
 
     try {
-        // Query tìm các giao dịch nạp tiền (DEPOSIT_SEPAY)
         const q = query(
             collection(db, "transactions_history"),
             where("uid", "==", currentUser.uid),
@@ -98,7 +98,7 @@ window.renderDepositHistory = async function() {
                     <td style="color:#bdc3c7; font-size:0.9em;">${date}</td>
                     <td style="color:#f1c40f; font-weight:bold;">+${parseInt(data.amount).toLocaleString()}</td>
                     <td>${note}</td>
-                    <td class="status-success">Thành công</td>
+                    <td class="status-success" style="color:#2ecc71;">Thành công</td>
                 </tr>
             `;
         });
@@ -111,6 +111,7 @@ window.renderDepositHistory = async function() {
 // HÀM RENDER NẠP TIỀN (SEPAY)
 window.renderDeposit = function() {
     const container = document.getElementById('deposit-container');
+    if (!container) return;
     if (!currentUser) {
         container.innerHTML = '<p style="text-align:center; color:red;">Vui lòng đăng nhập để nạp tiền.</p>';
         return;
@@ -166,6 +167,7 @@ window.renderDeposit = function() {
 // 3. Render Shop
 window.renderShopByType = function(type) {
     const gridEl = document.getElementById(`grid-${type}`);
+    if (!gridEl) return;
     gridEl.innerHTML = "";
     
     const filteredItems = SHOP_ITEMS.filter(item => item.shopType === type);
@@ -218,12 +220,14 @@ window.renderShopByType = function(type) {
     });
 }
 
-// 4. Render Kho Đồ
+// 4. Render Kho Đồ (Đã cập nhật logic Thẻ Đại Gia)
 window.renderInventory = function() {
     const container = document.getElementById('inventory-container');
+    if (!container) return;
     container.innerHTML = "";
     let hasItem = false;
 
+    // A. Plant Food
     const plantFoodCount = userData.item_plant_food_count || 0;
     if (plantFoodCount > 0) {
         hasItem = true;
@@ -241,6 +245,28 @@ window.renderInventory = function() {
         `;
     }
 
+    // [MỚI] B. Thẻ Đại Gia Tiêu Sản (item_broadcast_count)
+    const broadcastCount = userData.item_broadcast_count || 0;
+    if (broadcastCount > 0) {
+        hasItem = true;
+        container.innerHTML += `
+            <div class="inventory-item" style="border-left-color: #e74c3c; background: linear-gradient(45deg, #34495e, #4a235a);">
+                <div style="display:flex; align-items:center;">
+                    <div class="inv-icon">📢</div>
+                    <div>
+                        <div style="font-weight:bold; font-size:1.2em; color:#f1c40f;">Thẻ Đại Gia Tiêu Sản</div>
+                        <div style="color:#bdc3c7; font-size:0.9em;">SL: <b>${broadcastCount}</b> - Thông báo toàn Server</div>
+                    </div>
+                </div>
+                <button onclick="handleUseBroadcast()" 
+                    style="background:#e74c3c; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer; font-weight:bold; min-width: 80px; box-shadow: 0 0 10px #e74c3c;">
+                    SỬ DỤNG
+                </button>
+            </div>
+        `;
+    }
+
+    // C. Sun Pack
     let sunPackStatus = null;
     if (userData.inventory && userData.inventory.includes('sun_pack')) {
         sunPackStatus = 'perm';
@@ -290,6 +316,7 @@ window.renderInventory = function() {
         }
     }
 
+    // D. Các item khác
     if (userData.inventory && userData.inventory.length > 0) {
         userData.inventory.forEach(code => {
             if (code === 'sun_pack') return;
@@ -312,14 +339,31 @@ window.renderInventory = function() {
     if (!hasItem) container.innerHTML = '<div style="text-align:center; padding:50px; color:#7f8c8d;">Túi đồ trống rỗng... Hãy mua sắm đi!</div>';
 }
 
+// [MỚI] Xử lý sự kiện dùng Thẻ Đại Gia
+window.handleUseBroadcast = async () => {
+    if (!currentUser) return;
+    if (!confirm("Bạn muốn dùng Thẻ Đại Gia để thông báo cho cả Server biết độ chịu chơi của mình chứ?")) return;
+
+    if (loadingEl) loadingEl.style.display = 'flex';
+    const result = await useBigSpenderCard(currentUser.uid, userData.email);
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (result.success) {
+        alert("📢 Đã phát loa thông báo toàn Server!");
+    } else {
+        alert("Lỗi: " + result.message);
+    }
+};
+
 window.handleToggle = async (itemCode, newState) => {
     if (!currentUser) return;
     await toggleItemStatus(currentUser.uid, itemCode, newState);
 };
 
-// 5. Render Lịch Sử MUA HÀNG (Cũ)
+// 5. Render Lịch Sử Mua Hàng
 window.renderHistory = async function() {
     const tbody = document.getElementById('history-body');
+    if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Đang tải dữ liệu...</td></tr>';
 
     try {
@@ -367,9 +411,9 @@ window.handleBuy = async (itemId) => {
 
     if (!confirm(`Xác nhận mua "${item.name}"?`)) return;
 
-    loadingEl.style.display = 'flex';
+    if (loadingEl) loadingEl.style.display = 'flex';
     const result = await buyShopItemWithLog(currentUser.uid, item);
-    loadingEl.style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
 
     if (result.success) {
         alert("✅ Mua thành công! Kiểm tra Kho Đồ.");
