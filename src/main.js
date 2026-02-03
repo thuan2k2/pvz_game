@@ -154,18 +154,18 @@ function showBigSpenderEffect(message) {
         }
         .vip-rainbow-text {
             font-family: 'Segoe UI', sans-serif;
-            font-size: 2.2em;
-            font-weight: 900;
+            font-size: 1.3em;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             /* Hiệu ứng 7 màu */
             background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0px 0px 15px rgba(255, 255, 255, 0.5);
+            text-shadow: 0px 0px 6px rgba(255, 255, 255, 0.4);
             white-space: nowrap;
-            padding-right: 50px; /* Đệm đuôi */
+            padding-right: 30px; /* Đệm đuôi */
         }
     `;
     document.head.appendChild(style);
@@ -178,10 +178,10 @@ function showBigSpenderEffect(message) {
         top: 0; 
         left: 0;
         width: 100%;
-        height: 80px;
+        height: 48px;
         background: rgba(0, 0, 0, 0.9);
-        border-bottom: 3px solid #f1c40f;
-        box-shadow: 0 5px 20px rgba(241, 196, 15, 0.5);
+        border-bottom: 2px solid #f1c40f;
+        box-shadow: 0 3px 10px rgba(241, 196, 15, 0.35);
         z-index: 100000; /* Nổi lên trên cùng */
         display: flex;
         align-items: center;
