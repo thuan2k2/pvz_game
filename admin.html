@@ -61,29 +61,28 @@
         .header h1 { margin: 0; color: #2c3e50; font-size: 1.5em; }
         .search-input { padding: 12px 20px; width: 350px; border: 1px solid #ddd; border-radius: 30px; outline: none; background: #f9f9f9; }
         
-        /* [CẬP NHẬT] CSS cho phần thẻ thống kê để chứa 5 thẻ */
+        /* Stats Cards */
         .stats-cards { 
             display: flex; 
             gap: 20px; 
             margin-bottom: 40px; 
-            flex-wrap: wrap; /* Cho phép xuống dòng */
+            flex-wrap: wrap; 
         }
         .card { 
             background: white; 
             padding: 20px; 
             border-radius: 12px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-            flex: 1 1 18%; /* Độ rộng khoảng 20% màn hình */
-            min-width: 200px; /* Không nhỏ quá */
+            flex: 1 1 18%; 
+            min-width: 200px; 
             text-align: center; 
             border-left: 5px solid #3498db; 
         }
-        /* Màu sắc riêng cho từng thẻ */
-        .card:nth-child(1) { border-left-color: #3498db; } /* Tổng User */
-        .card:nth-child(2) { border-left-color: #27ae60; } /* Tổng Coin */
-        .card:nth-child(3) { border-left-color: #e67e22; } /* Coin đã dùng */
-        .card:nth-child(4) { border-left-color: #f1c40f; } /* Tổng VNCoin */
-        .card:nth-child(5) { border-left-color: #c0392b; } /* VNCoin đã dùng */
+        .card:nth-child(1) { border-left-color: #3498db; }
+        .card:nth-child(2) { border-left-color: #27ae60; }
+        .card:nth-child(3) { border-left-color: #e67e22; }
+        .card:nth-child(4) { border-left-color: #f1c40f; }
+        .card:nth-child(5) { border-left-color: #c0392b; }
         
         .card h3 { font-size: 0.9em; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; }
         .card p { font-size: 1.5em; font-weight: bold; color: #2c3e50; margin: 0; }
@@ -93,6 +92,7 @@
         .admin-table { width: 100%; border-collapse: collapse; }
         .admin-table th, .admin-table td { padding: 20px; text-align: left; border-bottom: 1px solid #ecf0f1; }
         .admin-table th { background: #34495e; color: white; text-transform: uppercase; font-size: 0.85em; }
+        .admin-table td img { max-width: 50px; border-radius: 4px; }
 
         /* Config */
         .config-container { background: white; border-radius: 12px; padding: 30px; margin-bottom: 40px; }
@@ -126,9 +126,14 @@
         .modal-box input, .modal-box select, .modal-box textarea { width: 100%; padding: 12px; margin: 10px 0 25px; border: 2px solid #eee; border-radius: 8px; outline: none; }
         .modal-actions { display: flex; gap: 15px; justify-content: center; }
         .modal-actions button { flex: 1; padding: 12px; font-size: 1em; }
-        
-        /* Modal Overlay Priority */
         .modal-overlay-top { z-index: 3000 !important; }
+
+        /* [NEW] STYLE CHO QUẢN LÝ CÂY TRỒNG */
+        .plant-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .image-preview-container { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .img-preview-box { width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .img-preview-box img { max-width: 100%; max-height: 100%; }
+        .img-label { font-size: 0.8em; text-align: center; display: block; margin-top: 5px; color: #777; }
     </style>
 </head>
 <body>
@@ -137,6 +142,7 @@
         <h2>PvZ ADMIN</h2>
         <a id="menu-users" class="menu-item active" onclick="switchTab('users')">👥 Quản lý Người chơi</a>
         <a id="menu-shop" class="menu-item" onclick="switchTab('shop')">🛒 Quản lý Shop VIP</a>
+        <a id="menu-plants" class="menu-item" onclick="switchTab('plants')">🌻 Quản lý Nông Trại</a>
         <a id="menu-config" class="menu-item" onclick="switchTab('config')">⚙️ Cấu hình Hệ thống</a>
         <a href="index.html" class="menu-item back-btn">← Quay lại Game</a>
     </div>
@@ -150,24 +156,19 @@
             
             <div class="stats-cards">
                 <div class="card">
-                    <h3>Tổng Người Chơi</h3>
-                    <p id="total-users">...</p>
+                    <h3>Tổng Người Chơi</h3><p id="total-users">...</p>
                 </div>
                 <div class="card">
-                    <h3>Tổng Coin (Server)</h3>
-                    <p id="total-coins">...</p>
+                    <h3>Tổng Coin (Server)</h3><p id="total-coins">...</p>
                 </div>
                 <div class="card">
-                    <h3>Tổng Coin Đã Dùng</h3>
-                    <p id="total-coins-used">...</p>
+                    <h3>Tổng Coin Đã Dùng</h3><p id="total-coins-used">...</p>
                 </div>
                 <div class="card">
-                    <h3>Tổng VNCoin (Server)</h3>
-                    <p id="total-vncoins">...</p>
+                    <h3>Tổng VNCoin (Server)</h3><p id="total-vncoins">...</p>
                 </div>
                 <div class="card">
-                    <h3>VNCoin Đã Dùng</h3>
-                    <p id="total-vncoins-used">...</p>
+                    <h3>VNCoin Đã Dùng</h3><p id="total-vncoins-used">...</p>
                 </div>
             </div>
 
@@ -192,6 +193,40 @@
             </div>
         </div>
 
+        <div id="section-plants" class="admin-section hidden">
+            <div class="header">
+                <h1>🌻 Quản lý Cây & Zombie</h1>
+                <div>
+                    <button class="btn" style="background:#27ae60;" onclick="openPlantModal('plant')">+ Thêm Cây</button>
+                    <button class="btn" style="background:#8e44ad;" onclick="openPlantModal('zombie')">+ Thêm Zombie</button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <button class="btn" style="background:#2ecc71;" onclick="filterGameData('plants')">Xem Danh Sách Cây</button>
+                <button class="btn" style="background:#95a5a6;" onclick="filterGameData('zombies')">Xem Danh Sách Zombie</button>
+            </div>
+
+            <div class="table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ảnh (Card)</th>
+                            <th>Tên hiển thị</th>
+                            <th>Giá (Sun)</th>
+                            <th>Sát thương</th>
+                            <th>Tốc độ</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="game-data-list">
+                        <tr><td colspan="7" style="text-align:center;">Đang tải dữ liệu từ Firebase...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="section-config" class="admin-section hidden">
             <div class="config-container">
                 <h2 style="margin-bottom: 20px; color: #2c3e50;">⚙️ Cấu hình Hệ thống</h2>
@@ -209,7 +244,6 @@
                             <option value="true">🟢 Bật (Đóng Server)</option>
                         </select>
                     </div>
-                    
                     <div class="form-group">
                         <label>Thời gian bảo trì:</label>
                         <select id="maintenance-duration" class="form-control" onchange="toggleCustomDate()">
@@ -221,12 +255,10 @@
                             <option value="custom">📅 Chọn giờ cụ thể...</option>
                         </select>
                     </div>
-                    
                     <div class="form-group" id="custom-date-group" style="display: none;">
                         <label>Kết thúc lúc:</label>
                         <input type="datetime-local" id="maintenance-custom-date" class="form-control">
                     </div>
-
                     <div class="form-group">
                         <label>Lời nhắn:</label>
                         <input type="text" id="maintenance-msg" class="form-control" placeholder="Ví dụ: Server đang bảo trì nâng cấp...">
@@ -257,7 +289,6 @@
                 <div class="form-group"><label>Tên sản phẩm:</label><input type="text" id="shop-name" class="form-control" required></div>
                 <div class="form-group"><label>Mô tả:</label><textarea id="shop-desc" class="form-control" rows="2"></textarea></div>
                 <div class="form-group"><label>Link Ảnh:</label><input type="text" id="shop-image" class="form-control" placeholder="assets/sun.png"></div>
-                
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1"><label>Giá bán:</label><input type="number" id="shop-price" class="form-control" required></div>
                     <div class="form-group" style="flex:1">
@@ -265,7 +296,6 @@
                         <select id="shop-currency" class="form-control"><option value="VNCoin">VNCoin</option><option value="Coin">Coin Game</option></select>
                     </div>
                 </div>
-
                 <div style="display:flex; gap:10px;">
                      <div class="form-group" style="flex:1">
                         <label>Danh mục:</label>
@@ -279,7 +309,6 @@
                         </select>
                     </div>
                 </div>
-
                 <div style="display:flex; gap:10px;">
                     <div class="form-group" style="flex:1">
                         <label id="shop-value-label">Giá trị/SL:</label>
@@ -293,7 +322,6 @@
                             <option value="30">30 Ngày</option>
                         </select>
                     </div>
-                    
                     <div class="form-group" style="flex:1">
                         <label>Chọn Vật Phẩm:</label>
                         <select id="shop-item-code" class="form-control" onchange="checkItemType()">
@@ -303,9 +331,7 @@
                         </select>
                     </div>
                 </div>
-
                 <div class="form-group"><label><input type="checkbox" id="shop-is-hot"> HOT 🔥</label></div>
-
                 <div class="modal-actions" style="margin-top:20px;">
                     <button type="submit" class="btn" style="background:#27ae60;">Lưu</button>
                     <button type="button" class="btn" style="background:#95a5a6;" onclick="closeModal('modal-shop-item')">Hủy</button>
@@ -314,45 +340,75 @@
         </div>
     </div>
 
-    <div id="modal-edit-player-item" class="modal hidden modal-overlay-top">
-        <div class="modal-box">
-            <h3 id="edit-item-title">Chỉnh sửa vật phẩm</h3>
-            <p style="margin-bottom:10px;">Đang sửa: <b id="edit-item-name" style="color:#e67e22">...</b></p>
-            
-            <div id="edit-qty-group" class="hidden">
-                <label>Nhập số lượng mới:</label>
-                <input type="number" id="edit-item-qty" class="form-control">
-            </div>
+    <div id="modal-game-data" class="modal hidden modal-overlay-top">
+        <div class="modal-box modal-large">
+            <h3 id="game-data-title" style="text-align:center;">Thêm Cây Mới</h3>
+            <form id="form-game-data">
+                <div class="plant-form-grid">
+                    <div>
+                        <div class="form-group">
+                            <label>Mã ID (Không dấu):</label>
+                            <input type="text" id="gd_id" class="form-control" placeholder="VD: peashooter" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tên hiển thị:</label>
+                            <input type="text" id="gd_name" class="form-control" placeholder="VD: Đậu Bắn Súng" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Giá tiền (Sun):</label>
+                            <input type="number" id="gd_cost" class="form-control" value="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Sát thương (Damage):</label>
+                            <input type="number" id="gd_damage" class="form-control" value="20">
+                        </div>
+                        <div class="form-group">
+                            <label>Tốc độ tấn công (giây):</label>
+                            <input type="number" id="gd_speed" class="form-control" value="1.5" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Loại (Dùng để lọc):</label>
+                            <select id="gd_type" class="form-control" disabled>
+                                <option value="plants">Cây Trồng (Plant)</option>
+                                <option value="zombies">Thây Ma (Zombie)</option>
+                            </select>
+                        </div>
+                    </div>
 
-            <div id="edit-duration-group" class="hidden">
-                <label>Chọn hạn sử dụng mới:</label>
-                <select id="edit-item-duration-select" class="form-control" onchange="toggleCustomDuration()">
-                    <option value="remove">🗑️ XÓA VẬT PHẨM NÀY</option>
-                    <option value="permanent">♾️ Vĩnh viễn</option>
-                    <option value="1">📅 Thêm 1 Ngày</option>
-                    <option value="3">📅 Thêm 3 Ngày</option>
-                    <option value="7">📅 Thêm 7 Ngày</option>
-                    <option value="custom">✍️ Nhập số ngày cụ thể...</option>
-                </select>
-                <input type="number" id="edit-item-custom-days" class="form-control hidden" placeholder="Nhập số ngày (Ví dụ: 5)" style="margin-top:10px;">
-            </div>
+                    <div>
+                        <h4 style="margin-bottom:10px;">📂 Upload Hình Ảnh</h4>
+                        
+                        <div class="form-group">
+                            <label>1. Ảnh Thẻ Bài (Card) - Folder: assets/card</label>
+                            <input type="file" id="file_card" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_card')">
+                            <div class="image-preview-container">
+                                <div class="img-preview-box"><img id="prev_card" src=""></div>
+                            </div>
+                        </div>
 
-            <div class="modal-actions" style="margin-top:20px;">
-                <button class="btn btn-edit" onclick="submitEditUserItem()">Cập nhật ngay</button>
-                <button class="btn" onclick="closeModal('modal-edit-player-item')" style="background: #95a5a6;">Hủy</button>
-            </div>
-        </div>
-    </div>
+                        <div class="form-group">
+                            <label>2. Ảnh Nhân Vật (Plant/Zombie) - Folder: assets/plant</label>
+                            <input type="file" id="file_plant" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_plant')">
+                            <div class="image-preview-container">
+                                <div class="img-preview-box"><img id="prev_plant" src=""></div>
+                            </div>
+                        </div>
 
-    <div id="modal-ban-user" class="modal hidden">
-        <div class="modal-box">
-            <h3>Cấm User</h3>
-            <b id="ban-email">...</b>
-            <select id="ban-duration" class="form-control" style="margin-top:10px;"><option value="1">1 Ngày</option><option value="99999">Vĩnh viễn</option></select>
-            <div class="modal-actions">
-                <button class="btn btn-ban" onclick="confirmBan()">Cấm</button>
-                <button class="btn" onclick="closeModal('modal-ban-user')" style="background:#95a5a6">Hủy</button>
-            </div>
+                        <div class="form-group" id="group_bullet_skin">
+                            <label>3. Ảnh Đạn (Bullet) - Folder: assets/pea</label>
+                            <input type="file" id="file_bullet" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_bullet')">
+                            
+                            <label style="margin-top:10px;">4. Ảnh Skin (Buff) - Folder: assets/skin</label>
+                            <input type="file" id="file_skin" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_skin')">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top:20px;">
+                    <button type="submit" class="btn" style="background:#27ae60;" id="btn-save-game-data">LƯU DỮ LIỆU</button>
+                    <button type="button" class="btn" style="background:#95a5a6;" onclick="closeModal('modal-game-data')">Hủy</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -368,7 +424,53 @@
     </div>
 
     <script type="module" src="src/admin.js"></script>
-    <script>
+    <script type="module" src="src/admin/dashboard.js"></script> <script>
+        function switchTab(tabId) {
+            // Ẩn tất cả section
+            document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
+            // Bỏ active tất cả menu
+            document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
+            
+            // Hiện section được chọn
+            document.getElementById('section-' + tabId).classList.remove('hidden');
+            // Active menu được chọn
+            document.getElementById('menu-' + tabId).classList.add('active');
+        }
+
+        // Mở Modal Thêm Cây/Zombie
+        window.openPlantModal = (type) => {
+            const modal = document.getElementById('modal-game-data');
+            const title = document.getElementById('game-data-title');
+            const typeSelect = document.getElementById('gd_type');
+            const bulletGroup = document.getElementById('group_bullet_skin');
+            
+            modal.classList.remove('hidden');
+            document.getElementById('form-game-data').reset();
+            // Reset ảnh preview
+            document.querySelectorAll('.img-preview-box img').forEach(img => img.src = "");
+
+            if (type === 'plant') {
+                title.innerText = "Thêm Cây Mới (Plant)";
+                typeSelect.value = "plants";
+                bulletGroup.style.display = 'block';
+            } else {
+                title.innerText = "Thêm Zombie Mới";
+                typeSelect.value = "zombies";
+                bulletGroup.style.display = 'none'; // Zombie không cần đạn và skin (tạm thời)
+            }
+        };
+
+        // Hàm xem trước ảnh khi chọn file
+        window.previewImage = (input, imgId) => {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(imgId).src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
         function toggleCustomDate() {
             const val = document.getElementById('maintenance-duration').value;
             const customGroup = document.getElementById('custom-date-group');
@@ -402,12 +504,6 @@
                 durInput.classList.add('hidden');
                 label.innerText = "Giá trị / Số lượng:";
             }
-        }
-        function toggleCustomDuration() {
-            const val = document.getElementById('edit-item-duration-select').value;
-            const customInput = document.getElementById('edit-item-custom-days');
-            if (val === 'custom') customInput.classList.remove('hidden');
-            else customInput.classList.add('hidden');
         }
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
     </script>

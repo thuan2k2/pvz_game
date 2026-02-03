@@ -1,13 +1,21 @@
 import { PROJECTILE_STATS, GAME_WIDTH } from '../constants.js';
-import { images, drawSprite } from '../Resources.js'; // Import bộ nạp ảnh
+import { images, customImages, drawSprite } from '../Resources.js'; // [MỚI] Import customImages
 
 export class Projectile {
-    constructor(x, y) {
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {string} type - Loại cây bắn ra đạn (vd: 'peashooter', 'melon_pult')
+     * @param {number} damage - Sát thương của đạn
+     */
+    constructor(x, y, type = 'peashooter', damage = 20) {
         this.x = x;
         this.y = y;
-        this.width = PROJECTILE_STATS.radius * 2; // Kích thước ảnh
+        this.width = PROJECTILE_STATS.radius * 2; 
         this.height = PROJECTILE_STATS.radius * 2;
-        this.power = 20;
+        
+        this.type = type;   // Lưu ID cây để tìm ảnh đạn tương ứng
+        this.power = damage; // Nhận sát thương từ Cây (không dùng cứng 20 nữa)
         this.speed = PROJECTILE_STATS.speed;
         this.delete = false; 
     }
@@ -22,8 +30,16 @@ export class Projectile {
     }
 
     draw(ctx) {
-        // Vẽ viên đạn bằng ảnh
-        // Nếu chưa có ảnh thì vẽ màu vàng như cũ
-        drawSprite(ctx, images.pea, this.x, this.y, this.width, this.height, PROJECTILE_STATS.color);
+        // [LOGIC MỚI] Tìm ảnh đạn dựa trên ID cây
+        // Quy tắc key ảnh đạn trong Resources.js: "bullet_" + id cây
+        let bulletImg = customImages[`bullet_${this.type}`];
+
+        // Fallback: Nếu không tìm thấy ảnh đạn riêng, dùng đạn đậu xanh mặc định
+        if (!bulletImg) {
+            bulletImg = images.pea; 
+        }
+
+        // Vẽ viên đạn
+        drawSprite(ctx, bulletImg, this.x, this.y, this.width, this.height, PROJECTILE_STATS.color);
     }
 }

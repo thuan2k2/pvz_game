@@ -4,6 +4,8 @@ import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'; 
 import { GameCore } from './game/GameCore.js';
 import { loadImages } from './game/Resources.js';
+// [MỚI] Import hàm tải dữ liệu cây từ Server
+import { fetchPlantsFromServer } from './plantsData.js';
 
 const ui = {
     greeting: document.getElementById('user-greeting'),
@@ -36,6 +38,10 @@ let currentState = {
 // --- 1. LOGIC AUTH & REALTIME UPDATE ---
 monitorAuthState(async (user) => {
     
+    // [MỚI] Tải dữ liệu Cây/Zombie từ Server trước khi vào game
+    // Việc này đảm bảo các cây mới thêm từ Admin sẽ hiển thị đúng
+    await fetchPlantsFromServer();
+
     // LẮNG NGHE THÔNG BÁO ĐẠI GIA (SERVER BROADCAST)
     const qBroadcast = query(collection(db, "server_broadcasts"), orderBy("timestamp", "desc"), limit(1));
     onSnapshot(qBroadcast, (snapshot) => {
