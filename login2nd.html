@@ -1,0 +1,162 @@
+!DOCTYPE html
+html lang=vi
+head
+    meta charset=UTF-8
+    meta name=viewport content=width=device-width, initial-scale=1.0
+    titleĐăng Nhập - PvZ Clonetitle
+    
+    style
+         { margin 0; padding 0; box-sizing border-box; font-family 'Segoe UI', sans-serif; }
+        
+        body {
+            height 100vh;
+            overflow hidden;
+            background-color #222;
+        }
+
+        .bg-layer {
+            position fixed; top 0; left 0; width 100%; height 100%;
+            background url('assetsbg.jpg') centercover;
+            filter brightness(0.4);
+            z-index -1;
+        }
+
+        .login-wrapper {
+            display flex;
+            justify-content center;
+            align-items center;
+            height 100vh;
+            width 100%;
+        }
+
+        .login-box {
+            background #fff;
+            padding 40px;
+            width 400px;
+            border-radius 10px;
+            text-align center;
+            border 5px solid #8b4513;
+            box-shadow 0 0 20px rgba(0,0,0,0.8);
+            position relative;
+        }
+
+        h1 { color #333; margin-bottom 25px; font-size 2em; }
+
+        .input-group { margin-bottom 15px; text-align left; }
+        .input-group label { display block; margin-bottom 5px; font-weight bold; color #555; }
+        .input-group input {
+            width 100%; padding 12px;
+            border 2px solid #ccc; border-radius 5px;
+            font-size 16px; outline none;
+        }
+        .input-group inputfocus { border-color #e67e22; }
+
+        .wood-btn {
+            width 100%; padding 12px;
+            background #8b4513; color white;
+            border 2px solid #5e2f0d; border-radius 5px;
+            font-size 1.1em; font-weight bold;
+            cursor pointer; margin-top 10px;
+            transition 0.2s;
+        }
+        .wood-btnhover { background #a0522d; }
+        .wood-btndisabled { background #7f8c8d; cursor not-allowed; }
+
+         Style mới cho nút Google 
+        .google-btn {
+            background #fff;
+            color #444;
+            border 2px solid #ddd;
+            margin-top 15px;
+            display flex;
+            align-items center;
+            justify-content center;
+            gap 10px;
+        }
+        .google-btnhover { background #f5f5f5; }
+        .google-btn img { width 20px; }
+
+        .links { margin-top 20px; font-size 0.9em; color #555; }
+        .links a { text-decoration none; color #d35400; font-weight bold; }
+        .links ahover { text-decoration underline; }
+    style
+head
+body
+
+    div class=bg-layerdiv
+
+    div class=login-wrapper
+        div class=login-box
+            h1ĐĂNG NHẬPh1
+            
+            form id=form-login onsubmit=event.preventDefault()
+                div class=input-group
+                    labelEmaillabel
+                    input type=email id=email placeholder=Nhập email... required
+                div
+                
+                div class=input-group
+                    labelMật khẩulabel
+                    input type=password id=password placeholder=Nhập mật khẩu... required
+                div
+
+                button type=submit id=btn-submit class=wood-btnVÀO GAMEbutton
+            form
+
+            button id=btn-google class=wood-btn google-btn
+                img src=httpswww.gstatic.comfirebasejsui2.0.0imagesauthgoogle.svg alt=google
+                Đăng nhập bằng Google
+            button
+
+            div class=links
+                Chưa có tài khoản a href=register.htmlĐăng ký ngaya
+                br
+                a href=forgot_password.html style=color #e74c3c; font-size 0.9em;Quên mật khẩua
+                brbr
+                a href=index.html style=color #7f8c8d;← Quay lại Trang chủa
+            div
+        div
+    div
+
+    script type=module
+        import { auth } from '.srcfirebaseconfig.js';
+        import { loginWithGoogle } from '.srcfirebaseauth.js';
+        import { signInWithEmailAndPassword } from httpswww.gstatic.comfirebasejs10.8.0firebase-auth.js;
+
+         Xử lý đăng nhập bằng Google
+        document.getElementById('btn-google').addEventListener('click', async () = {
+            try {
+                await loginWithGoogle();
+                window.location.href = index.html;
+            } catch (err) {
+                console.error(Lỗi Google Auth, err);
+                if (err.code !== 'authpopup-closed-by-user') {
+                    alert(Đăng nhập Google thất bại!nLỗi  + err.message);
+                }
+            }
+        });
+
+        document.getElementById('btn-submit').addEventListener('click', async () = {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const btn = document.getElementById('btn-submit');
+            
+            if (!email  !pass) return; 
+
+            const originalText = btn.innerText;
+            btn.innerText = Đang xử lý...;
+            btn.disabled = true;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                window.location.href = index.html;
+            } catch (err) {
+                console.error(Lỗi, err);
+                alert(Đăng nhập thất bại!nLỗi  + err.message);
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+    script
+body
+html
