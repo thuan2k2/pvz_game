@@ -69,9 +69,9 @@ window.renderDeposit = function() {
     }
 
     // THÔNG TIN TÀI KHOẢN (Thay đổi theo STK của bạn)
-    const BANK_BIN = "970422"; // MBBank
+    const BANK_BIN = "970423"; // TPBank (Tien Phong Bank)
     const BANK_ACC = "0382134414"; // Số tài khoản (Trùng khớp với API Key SePay để dễ quản lý)
-    const ACCOUNT_NAME = "NGUYEN VAN A"; // Tên chủ tài khoản
+    const ACCOUNT_NAME = "PHAM DUC THUAN"; // Tên chủ tài khoản
     const AMOUNT = 0; // Để 0 để người dùng tự nhập
     
     // CÚ PHÁP: NAP + UID
