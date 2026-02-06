@@ -1,14 +1,14 @@
-import { auth, db, database } from "./firebase/config.js";
+// file: src/shop.js
+import { auth, db } from "./firebase/config.js"; // [ĐÃ SỬA] Bỏ import database
 import { onAuthStateChanged } from "firebase/auth";
 import { 
     doc, onSnapshot, collection, query, orderBy, limit, getDocs, where 
 } from "firebase/firestore"; 
-import { ref, onValue } from "firebase/database"; // Import Realtime Database
 import { buyShopItemWithLog, toggleItemStatus, useBigSpenderCard } from "./firebase/auth.js"; 
 
 // Biến toàn cục
 let SHOP_ITEMS = [];       // Shop thủ công (Admin tạo từ Firestore)
-let GAME_DATA_ITEMS = [];  // Shop tự động (Cây trồng từ Realtime DB)
+let GAME_DATA_ITEMS = [];  // Shop tự động (Cây trồng từ Firestore game_data)
 let currentUser = null;
 let userData = {}; 
 
@@ -18,10 +18,10 @@ const gameCoinEl = document.getElementById('user-coin');
 const loadingEl = document.getElementById('loading');
 
 // ============================================================
-// 1. LẮNG NGHE DỮ LIỆU TỪ 2 NGUỒN (FIRESTORE & REALTIME DB)
+// 1. LẮNG NGHE DỮ LIỆU TỪ FIRESTORE (2 NGUỒN)
 // ============================================================
 
-// A. Lắng nghe Shop Thủ Công (Firestore)
+// A. Lắng nghe Shop Vật Phẩm (collection: shop_items)
 const qShop = query(collection(db, "shop_items"), orderBy("price", "asc"));
 onSnapshot(qShop, (snapshot) => {
     SHOP_ITEMS = [];
@@ -32,32 +32,30 @@ onSnapshot(qShop, (snapshot) => {
     refreshActiveTab();
 });
 
-// B. Lắng nghe Dữ Liệu Cây Trồng (Realtime Database)
-// Tự động tạo thẻ bài trong Shop Coin cho mỗi cây có trong data
-const gameDataRef = ref(database, 'game_data');
-onValue(gameDataRef, (snapshot) => {
+// B. [ĐÃ SỬA] Lắng nghe Shop Cây Trồng (collection: game_data)
+// Chuyển từ Realtime Database sang Firestore để đồng bộ với Admin
+const qGameData = query(collection(db, "game_data"));
+onSnapshot(qGameData, (snapshot) => {
     GAME_DATA_ITEMS = [];
-    if (snapshot.exists()) {
-        const data = snapshot.val();
+    snapshot.forEach((doc) => {
+        const plant = doc.data();
         
-        // Xử lý Cây (Plants)
-        if (data.plants) {
-            Object.values(data.plants).forEach(plant => {
-                // Tạo vật phẩm ảo cho shop
-                GAME_DATA_ITEMS.push({
-                    id: `plant_${plant.id}`, // ID duy nhất
-                    type: 'plant_card',     // Loại vật phẩm đặc biệt
-                    name: plant.name,
-                    price: plant.cost,      // Giá mua
-                    currency: 'Coin',       // Mua bằng Coin game
-                    image: plant.assets.card, // Lấy ảnh Card làm ảnh sản phẩm
-                    description: `Sát thương: ${plant.stats?.damage || 0} - Tốc độ: ${plant.stats?.speed || 0}s`,
-                    shopType: 'coin',       // Hiển thị ở tab Coin
-                    originalData: plant     // Lưu data gốc để dùng khi mua
-                });
+        // Chỉ lấy item là Cây (plants) và có giá tiền
+        if ((!plant.type || plant.type === 'plants') && plant.price) {
+            GAME_DATA_ITEMS.push({
+                id: doc.id,                 // ID document (vd: peashooter)
+                type: 'plant_card',         // Đánh dấu là thẻ cây
+                name: plant.name,
+                price: parseInt(plant.price) || 0,
+                currency: 'Coin',           // Mặc định mua bằng Coin
+                // Ưu tiên ảnh card, nếu không có lấy ảnh plant
+                image: plant.cardImage || plant.plantImage || `assets/card/${doc.id}.png`,
+                description: `Sát thương: ${plant.damage || 0} - Tốc độ: ${plant.speed || 0}s`,
+                shopType: 'coin',           // Hiển thị ở tab Coin
+                originalData: { ...plant, id: doc.id } // Lưu data gốc
             });
         }
-    }
+    });
     refreshActiveTab();
 });
 
@@ -106,7 +104,7 @@ onAuthStateChanged(auth, (user) => {
 // 3. CÁC HÀM RENDER GIAO DIỆN
 // ============================================================
 
-// [MỚI] RENDER LỊCH SỬ NẠP TIỀN
+// RENDER LỊCH SỬ NẠP TIỀN
 window.renderDepositHistory = async function() {
     const tbody = document.getElementById('deposit-history-body');
     if (!tbody) return;
@@ -239,12 +237,16 @@ window.renderShopByType = function(type) {
         // Nếu là cây trồng (có link ảnh online) thì dùng luôn, còn không thì fallback về ảnh mặc định
         const imgUrl = (item.image && (item.image.startsWith('http') || item.image.includes('assets/'))) ? item.image : 'assets/sun.png'; 
 
+        // Kiểm tra xem đã sở hữu chưa (đối với cây trồng hoặc item unique)
+        const inventory = userData.inventory || [];
+        const isOwned = inventory.includes(item.id);
+        
         let detailInfo = "";
         
         // Logic hiển thị chi tiết
         if (item.type === 'coin') {
             detailInfo = `<div style="color:#2ecc71; font-size:0.9em;">Nhận: <b>${parseInt(item.value).toLocaleString()} Coin</b></div>`;
-        } else if (item.type === 'plant_card') { // [MỚI] Hiển thị thông số cây
+        } else if (item.type === 'plant_card') {
             detailInfo = `<div style="color:#3498db; font-size:0.8em; font-style:italic;">${item.description}</div>`;
         } else if (item.itemCode === 'plant_food') {
             detailInfo = `<div style="color:#27ae60; font-size:0.9em;">Số lượng: <b>${item.amount || 1} bình</b></div>`;
@@ -260,14 +262,18 @@ window.renderShopByType = function(type) {
         card.className = "product-card";
         
         // CSS cho nút mua
-        const btnStyle = canBuy ? '' : 'background:#7f8c8d; cursor:not-allowed; opacity:0.7;';
-        const btnText = canBuy ? 'MUA NGAY' : 'KHÔNG ĐỦ';
-        const btnAttr = canBuy ? '' : 'disabled';
+        let btnStyle = canBuy ? '' : 'background:#7f8c8d; cursor:not-allowed; opacity:0.7;';
+        let btnText = canBuy ? 'MUA NGAY' : 'KHÔNG ĐỦ';
+        let btnAttr = canBuy ? '' : 'disabled';
+        let buyAction = `handleBuy('${item.id}')`; 
 
-        // Xử lý hành động mua
-        let buyAction = `handleBuy('${item.id}')`; // Mặc định là mua vật phẩm thường
-        if (item.type === 'plant_card') {
-            buyAction = `handleBuyPlant('${item.originalData.id}', ${item.price})`; // Mua cây thì gọi hàm khác
+        // Nếu đã sở hữu cây -> disable nút
+        if (item.type === 'plant_card' && isOwned) {
+            btnText = "ĐÃ SỞ HỮU";
+            btnStyle = 'background:#27ae60; cursor:default;';
+            btnAttr = 'disabled';
+        } else if (item.type === 'plant_card') {
+            buyAction = `handleBuyPlant('${item.id}', ${item.price})`;
         }
 
         card.innerHTML = `
@@ -289,7 +295,7 @@ window.renderShopByType = function(type) {
     });
 }
 
-// 4. Render Kho Đồ (Đã cập nhật logic Thẻ Đại Gia)
+// 4. Render Kho Đồ
 window.renderInventory = function() {
     const container = document.getElementById('inventory-container');
     if (!container) return;
@@ -314,7 +320,7 @@ window.renderInventory = function() {
         `;
     }
 
-    // [MỚI] B. Thẻ Đại Gia Tiêu Sản (item_broadcast_count)
+    // B. Thẻ Đại Gia Tiêu Sản (item_broadcast_count)
     const broadcastCount = userData.item_broadcast_count || 0;
     if (broadcastCount > 0) {
         hasItem = true;
@@ -389,13 +395,17 @@ window.renderInventory = function() {
     if (userData.inventory && userData.inventory.length > 0) {
         userData.inventory.forEach(code => {
             if (code === 'sun_pack') return;
+            // Tìm tên cây nếu là code cây
+            const plantInfo = GAME_DATA_ITEMS.find(p => p.id === code);
+            const itemName = plantInfo ? "Cây: " + plantInfo.name : "Vật Phẩm: " + code;
+            
             hasItem = true;
             container.innerHTML += `
                 <div class="inventory-item" style="border-left-color: #9b59b6;">
                     <div style="display:flex; align-items:center;">
                         <div class="inv-icon">🎁</div>
                         <div>
-                            <div style="font-weight:bold; font-size:1.2em;">Vật Phẩm: ${code}</div>
+                            <div style="font-weight:bold; font-size:1.2em;">${itemName}</div>
                             <div style="color:#bdc3c7; font-size:0.9em;">Đã sở hữu vĩnh viễn</div>
                         </div>
                     </div>
@@ -412,7 +422,6 @@ window.renderInventory = function() {
 // 4. XỬ LÝ HÀNH ĐỘNG NGƯỜI DÙNG (MUA, SỬ DỤNG)
 // ============================================================
 
-// Xử lý sự kiện dùng Thẻ Đại Gia
 window.handleUseBroadcast = async () => {
     if (!currentUser) return;
     if (!confirm("Bạn muốn dùng Thẻ Đại Gia để thông báo cho cả Server biết độ chịu chơi của mình chứ?")) return;
@@ -428,13 +437,11 @@ window.handleUseBroadcast = async () => {
     }
 };
 
-// Xử lý bật/tắt Item (ví dụ Sun Pack)
 window.handleToggle = async (itemCode, newState) => {
     if (!currentUser) return;
     await toggleItemStatus(currentUser.uid, itemCode, newState);
 };
 
-// 5. Render Lịch Sử Mua Hàng
 window.renderHistory = async function() {
     const tbody = document.getElementById('history-body');
     if (!tbody) return;
@@ -461,7 +468,7 @@ window.renderHistory = async function() {
             const data = doc.data();
             const date = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleString('vi-VN') : 'N/A';
             const priceColor = data.assetType === 'VNCoin' ? '#f1c40f' : '#2ecc71';
-            const itemName = data.note.replace('Mua: ', '').replace('Mua vật phẩm: ', '');
+            const itemName = data.note ? data.note.replace('Mua: ', '').replace('Mua vật phẩm: ', '') : 'Vật phẩm';
 
             tbody.innerHTML += `
                 <tr>
@@ -496,17 +503,34 @@ window.handleBuy = async (itemId) => {
     }
 };
 
-// [MỚI] Hàm xử lý mua Cây Trồng
-// Lưu ý: Hiện tại hàm này chỉ mô phỏng việc mua, chưa trừ tiền thật.
+// [ĐÃ SỬA] Hàm xử lý mua Cây Trồng
 window.handleBuyPlant = async (plantId, price) => {
     if (!currentUser) return;
-    if (!confirm(`Bạn muốn mở khóa cây này với giá ${price} Coin?`)) return;
+    // Tìm thông tin cây trong danh sách đã tải
+    const item = GAME_DATA_ITEMS.find(i => i.id === plantId);
+    if (!item) return alert("Không tìm thấy thông tin cây!");
+
+    if (!confirm(`Bạn muốn mở khóa cây "${item.name}" với giá ${price} Coin?`)) return;
 
     if (loadingEl) loadingEl.style.display = 'flex';
     
-    // Giả lập xử lý backend
-    setTimeout(() => {
-        if (loadingEl) loadingEl.style.display = 'none';
-        alert("Tính năng mua cây đang được hoàn thiện! (Đã nhận lệnh mua: " + plantId + ")");
-    }, 1000);
+    // Tạo object dữ liệu để gửi hàm mua
+    const buyData = {
+        id: plantId,
+        name: item.name,
+        price: price,
+        currency: 'Coin',
+        type: 'plant', // Đánh dấu là cây để server (hoặc logic mua) biết
+        shopType: 'coin'
+    };
+
+    const result = await buyShopItemWithLog(currentUser.uid, buyData);
+    
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    if (result.success) {
+        alert(`✅ Chúc mừng! Bạn đã mở khóa ${item.name}. Hãy vào game để sử dụng.`);
+    } else {
+        alert("❌ Lỗi: " + result.message);
+    }
 };

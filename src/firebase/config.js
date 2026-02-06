@@ -5,13 +5,13 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
-import { getDatabase } from "firebase/database";
+// [ĐÃ XÓA] Không import Realtime Database nữa
+// import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBLL7VHNqlfMMddcguHoavzy_Cj6ReUhU4",
   authDomain: "plans-game.firebaseapp.com",
-  // Vẫn giữ dòng này để chắc chắn
-  databaseURL: "https://plans-game-default-rtdb.firebaseio.com", 
+  // [ĐÃ XÓA] databaseURL (Không cần thiết vì đã bỏ Realtime DB)
   projectId: "plans-game",
   storageBucket: "plans-game.firebasestorage.app",
   messagingSenderId: "480122242241",
@@ -26,8 +26,8 @@ export const db = getFirestore(app);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);
 
-// [SỬA LẠI DÒNG NÀY] Ép buộc truyền URL trực tiếp vào hàm getDatabase
-// Lấy đúng link từ thông báo lỗi trong ảnh của bạn
-export const database = getDatabase(app, "https://plans-game-default-rtdb.firebaseio.com/");
+// [QUAN TRỌNG] Gán bằng null để tắt cảnh báo lỗi Config
+// Hệ thống bây giờ chỉ dùng 'db' (Firestore)
+export const database = null;
 
-console.log("🔥 Firebase đã được kết nối (Realtime DB Forced)!");
+console.log("🔥 Firebase đã được kết nối (Firestore Mode)!");
