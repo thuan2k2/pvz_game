@@ -92,7 +92,26 @@ window.editCoin = async (userId, currentCoin) => {
 
 // A. Các hàm hỗ trợ UI
 
-// 1. [FIX LOGIC] Ẩn/Hiện trường nhập liệu tùy theo loại (Plant/Zombie)
+// [MỚI - SỬA LỖI] Hàm xử lý thay đổi hành vi (Behavior)
+window.toggleBehaviorFields = () => {
+    const behavior = document.getElementById('gd_behavior').value;
+    const speedLabel = document.getElementById('lbl_speed');
+    const speedHint = document.getElementById('hint_speed');
+
+    // Thay đổi gợi ý nhập liệu cho phù hợp
+    if (behavior === 'producer') {
+        if(speedLabel) speedLabel.innerText = "Tốc độ sinh Nắng (Giây):";
+        if(speedHint) speedHint.innerText = "Thời gian đẻ ra 1 mặt trời";
+    } else if (behavior === 'mine') {
+        if(speedLabel) speedLabel.innerText = "Thời gian ngòi nổ (Giây):";
+        if(speedHint) speedHint.innerText = "Thời gian chờ để kích hoạt mìn";
+    } else {
+        if(speedLabel) speedLabel.innerText = "Tốc độ tấn công (Giây):";
+        if(speedHint) speedHint.innerText = "Thời gian hồi chiêu bắn";
+    }
+};
+
+// 1. Ẩn/Hiện trường nhập liệu tùy theo loại (Plant/Zombie)
 window.handleTypeChange = () => {
     const type = document.getElementById('gd_type').value;
     const plantGroup = document.getElementById('group-plant-stats'); // Nhóm giá tiền
@@ -100,7 +119,7 @@ window.handleTypeChange = () => {
     const behaviorGroup = document.getElementById('group-behavior'); // Nhóm hành vi
     
     if (type === 'zombies') {
-        // Zombie: Ẩn giá tiền, ảnh đạn và hành vi (Zombie chưa cần behavior phức tạp)
+        // Zombie: Ẩn giá tiền, ảnh đạn và hành vi
         if(plantGroup) plantGroup.style.display = 'none';
         if(bulletGroup) bulletGroup.style.display = 'none';
         if(behaviorGroup) behaviorGroup.style.display = 'none';
@@ -134,9 +153,11 @@ window.openAddModal = () => {
     document.getElementById('modal-game-data').classList.remove('hidden');
     
     if(window.handleTypeChange) window.handleTypeChange();
+    // [MỚI] Gọi hàm này để reset label tốc độ
+    if(window.toggleBehaviorFields) window.toggleBehaviorFields();
 };
 
-// 3. [CẬP NHẬT] Mở Modal Sửa (Đổ dữ liệu cũ vào form)
+// 3. Mở Modal Sửa
 window.editGameData = async (id) => {
     try {
         const docSnap = await getDoc(doc(db, "game_data", id));
@@ -150,7 +171,7 @@ window.editGameData = async (id) => {
         document.getElementById('gd_id').disabled = true; 
         document.getElementById('gd_name').value = data.name;
         
-        // [MỚI] Đổ dữ liệu hành vi
+        // Đổ dữ liệu hành vi
         if(document.getElementById('gd_behavior')) {
             document.getElementById('gd_behavior').value = data.behavior || 'shooter';
         }
@@ -183,6 +204,8 @@ window.editGameData = async (id) => {
         document.getElementById('modal-game-data').classList.remove('hidden');
         
         window.handleTypeChange();
+        // [MỚI] Cập nhật label tốc độ theo behavior hiện tại
+        if(window.toggleBehaviorFields) window.toggleBehaviorFields();
 
     } catch (error) {
         console.error(error);
@@ -254,7 +277,7 @@ if (gameDataForm) {
             const valSpeed = parseFloat(document.getElementById('gd_speed').value) || 0;
             const valHp = parseInt(document.getElementById('gd_hp').value) || 100;
             
-            // [MỚI] Lấy hành vi
+            // Lấy hành vi
             const valBehavior = document.getElementById('gd_behavior') ? document.getElementById('gd_behavior').value : 'shooter';
 
             // 2. Chuẩn bị Object dữ liệu
@@ -263,7 +286,7 @@ if (gameDataForm) {
                 name: name,
                 type: type,
                 
-                // [MỚI] Lưu hành vi vào DB
+                // Lưu hành vi vào DB
                 behavior: valBehavior,
 
                 // Dữ liệu phẳng
@@ -277,7 +300,7 @@ if (gameDataForm) {
                 plantImage: finalPlant,
                 bulletImage: finalBullet,
                 
-                // Dữ liệu lồng nhau (cho GameCore cũ nếu cần)
+                // Dữ liệu lồng nhau
                 stats: {
                     damage: valDamage,
                     speed: valSpeed,
