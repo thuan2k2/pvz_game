@@ -14,7 +14,7 @@ import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
 import { callEndGameReward, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
-// [MỚI] Import dữ liệu cây động
+// Import dữ liệu cây động (Chứa cả Plant và Zombie từ Admin)
 import { PLANT_DATA } from '../plantsData.js'; 
 
 export default class GameCore {
@@ -40,7 +40,7 @@ export default class GameCore {
         this.mouse = { x: undefined, y: undefined, width: 0.1, height: 0.1 };
         
         this.selectedTool = 'plant';
-        this.selectedPlantType = 'peashooter'; // Mặc định chọn Peashooter (thay vì sunflower)
+        this.selectedPlantType = 'peashooter'; 
 
         this.currentWaveIndex = 0;
         this.waveTimer = 0;        
@@ -77,10 +77,9 @@ export default class GameCore {
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('click', this.handleMouseClick);
         
-        // [CẬP NHẬT] Xử lý chọn cây (Dynamic)
-        // Vì thẻ bài bây giờ được render động bằng JS, nên ta dùng Event Delegation
+        // Xử lý chọn cây (Dynamic)
         document.body.addEventListener('click', (e) => {
-            const card = e.target.closest('.plant-card'); // Tìm thẻ cha là .plant-card
+            const card = e.target.closest('.plant-card'); 
             if (card) {
                 // Xóa selected cũ
                 document.querySelectorAll('.plant-card').forEach(c => c.classList.remove('selected'));
@@ -91,7 +90,7 @@ export default class GameCore {
                 card.classList.add('selected');
                 this.selectedTool = 'plant';
                 
-                // Lấy ID cây (quan trọng: logic mới)
+                // Lấy ID cây
                 const type = card.getAttribute('data-type');
                 if(type) this.selectedPlantType = type;
             }
@@ -110,7 +109,6 @@ export default class GameCore {
         const pfBtn = document.getElementById('plant-food-tool');
         if (pfBtn) {
             pfBtn.addEventListener('click', () => {
-                // Cập nhật lại số lượng từ localStorage khi click (phòng trường hợp vừa mua xong)
                 this.plantFoodCount = parseInt(localStorage.getItem('item_plant_food_count') || 0);
                 this.updatePlantFoodUI();
 
@@ -158,37 +156,29 @@ export default class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        // [FIXED] LOGIC KIỂM TRA GÓI MẶT TRỜI (SUN PACK)
+        // LOGIC KIỂM TRA GÓI MẶT TRỜI
         const inventory = JSON.parse(localStorage.getItem('user_inventory') || '[]');
         const tempItems = JSON.parse(localStorage.getItem('user_temp_items') || '{}');
         const settings = JSON.parse(localStorage.getItem('user_item_settings') || '{}');
 
         let hasSunPack = false;
 
-        // 1. Kiểm tra Vĩnh viễn (Trong mảng inventory)
         if (inventory.includes('sun_pack')) {
             hasSunPack = true;
-        } 
-        // 2. Kiểm tra Có hạn (Trong temp_items)
-        else if (tempItems.sun_pack) {
+        } else if (tempItems.sun_pack) {
             const now = Date.now();
-            // So sánh thời gian hiện tại với thời gian hết hạn
             if (tempItems.sun_pack > now) {
                 hasSunPack = true;
             }
         }
 
-        // 3. Kiểm tra Cài đặt Bật/Tắt (Mặc định là Bật/true nếu chưa có setting)
         const isEnabled = settings.sun_pack !== false; 
 
         if (hasSunPack && isEnabled) {
-            this.sun += 100; // Cộng 100 sun
+            this.sun += 100;
             console.log("🌞 Đã kích hoạt Gói Mặt Trời (+100 Sun)");
-        } else {
-            console.log("🌞 Không kích hoạt Sun Pack (Không có hoặc Đang tắt)");
         }
 
-        // 2. Cập nhật số lượng Plant Food mới nhất
         this.plantFoodCount = parseInt(localStorage.getItem('item_plant_food_count') || 0);
         this.updatePlantFoodUI();
         
@@ -212,40 +202,50 @@ export default class GameCore {
         document.getElementById('bottom-toolbar').classList.remove('hidden');
         document.getElementById('btn-pause-game').classList.remove('hidden');
         
-        // [MỚI] Render thanh chọn cây (Shop Bar) khi bắt đầu game
+        // [QUAN TRỌNG] Render thanh chọn cây khi bắt đầu game
         this.renderPlantShopBar();
 
         this.animate();
     }
 
-    // [MỚI] Hàm vẽ thanh chọn cây động dựa trên PLANT_DATA
+    // [FIX] Hàm vẽ thanh chọn cây: Lọc chỉ hiện 'plants' và sắp xếp
     renderPlantShopBar() {
         const container = document.getElementById('plant-shop-bar'); 
         if (!container) return;
         
-        container.innerHTML = ''; // Reset cũ
+        container.innerHTML = ''; 
         
-        // Duyệt qua danh sách cây trong PLANT_DATA
-        for (const [id, plant] of Object.entries(PLANT_DATA)) {
+        // 1. Chuyển đổi PLANT_DATA thành mảng để dễ xử lý
+        // 2. Lọc: Chỉ lấy item có type là 'plants' (hoặc undefined nếu là dữ liệu cũ) và có giá tiền
+        const plantsArray = Object.entries(PLANT_DATA).filter(([id, data]) => {
+            return (data.type === 'plants' || !data.type) && data.cost !== undefined;
+        });
+
+        // 3. Sắp xếp: Cây rẻ lên trước, đắt ra sau
+        plantsArray.sort((a, b) => a[1].cost - b[1].cost);
+
+        // 4. Render
+        plantsArray.forEach(([id, plant]) => {
             const card = document.createElement('div');
             card.className = 'plant-card';
             card.setAttribute('data-type', id);
-            // Default select cây đầu tiên
-            if(id === 'peashooter') {
+            
+            // Auto-select cây đầu tiên (thường là peashooter hoặc cây rẻ nhất)
+            if(id === this.selectedPlantType || (!this.selectedPlantType && id === 'peashooter')) {
                 card.classList.add('selected');
-                this.selectedPlantType = 'peashooter';
+                this.selectedPlantType = id;
             }
 
-            // Ảnh Card (ưu tiên link online)
+            // Xử lý ảnh (Hỗ trợ cả link online và link local)
             let imgSrc = plant.assets.card;
-            if(!imgSrc.startsWith('http') && !imgSrc.startsWith('assets/')) imgSrc = `/assets/card/${imgSrc}`;
+            if(!imgSrc.startsWith('http') && !imgSrc.includes('assets/')) imgSrc = `/assets/card/${imgSrc}`;
 
             card.innerHTML = `
                 <div class="card-cost">${plant.cost}</div>
-                <img src="${imgSrc}" alt="${plant.name}">
+                <img src="${imgSrc}" alt="${plant.name}" onerror="this.src='assets/card/Sunflower.png'">
             `;
             container.appendChild(card);
-        }
+        });
     }
 
     togglePause() {
@@ -324,6 +324,7 @@ export default class GameCore {
                 const randomRow = Math.floor(Math.random() * GRID_ROWS);
                 const verticalPosition = (randomRow * CELL_HEIGHT) + TOP_OFFSET;
                 
+                // Gọi Zombie mới (Zombie class đã được update để tự lấy stats từ PLANT_DATA)
                 const newZombie = new Zombie(verticalPosition, zombieType);
                 newZombie.x = GAME_WIDTH;
                 this.zombies.push(newZombie);
@@ -343,7 +344,7 @@ export default class GameCore {
     }
 
     handleMouseClick() {
-        // 1. Xử lý nhặt mặt trời (Sun)
+        // 1. Xử lý nhặt mặt trời
         let sunClicked = false;
         for (let i = 0; i < this.suns.length; i++) {
             if (collision(this.suns[i], {x: this.mouse.x, y: this.mouse.y, width: 0.1, height: 0.1})) {
@@ -376,7 +377,6 @@ export default class GameCore {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
                     this.plants[i].activatePower();
                     
-                    // --- LOGIC TRỪ ITEM TRÊN SERVER ---
                     this.plantFoodCount--; 
                     localStorage.setItem('item_plant_food_count', this.plantFoodCount); 
                     this.updatePlantFoodUI();
@@ -393,7 +393,7 @@ export default class GameCore {
             return;
         }
 
-        // 4. Xử lý Xẻng (Shovel)
+        // 4. Xử lý Xẻng
         if (this.selectedTool === 'shovel') {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
@@ -409,18 +409,17 @@ export default class GameCore {
             if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) return; 
         }
 
-        // 6. [MỚI] TRỒNG CÂY (Dùng dữ liệu động PLANT_DATA)
-        // Lấy thông tin cây từ PLANT_DATA dựa trên ID đang chọn (selectedPlantType)
+        // 6. TRỒNG CÂY
         const plantInfo = PLANT_DATA[this.selectedPlantType];
         
-        if (plantInfo) {
-            // Kiểm tra đủ tiền không
+        // Kiểm tra kỹ: Phải có info và phải là loại 'plants' (tránh trồng nhầm zombie vào ô)
+        if (plantInfo && (plantInfo.type === 'plants' || !plantInfo.type)) {
             if (this.sun >= plantInfo.cost) {
-                // Truyền cả ID và plantInfo vào class Plant
                 this.plants.push(new Plant(gridPositionX, gridPositionY, this.selectedPlantType, plantInfo));
                 this.sun -= plantInfo.cost;
             } else {
-                console.log("Không đủ sun!"); // Có thể thêm UI báo lỗi
+                // Có thể thêm hiệu ứng âm thanh fail tại đây
+                console.log("Không đủ sun!"); 
             }
         }
     }
@@ -455,17 +454,20 @@ export default class GameCore {
                 const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
                 const isZombieInStreet = z.x > GRID_RIGHT_EDGE + 10; 
 
-                if (p.y === z.y + 35 && p && collision(p, z) && !isZombieInStreet) { 
-                    if (collision(p, z)) {
-                        z.health -= p.power; 
-                        p.delete = true; 
-                        break; 
-                    }
-                }
+                // Kiểm tra va chạm (Thêm điều kiện zombie phải vào sân mới bắn trúng để công bằng)
                 if (collision(p, z) && !isZombieInStreet) { 
-                      z.health -= p.power; 
-                      p.delete = true; 
-                      break; 
+                    // Zombie nhận damage
+                    // Gọi hàm takeDamage của Zombie class để xử lý hiệu ứng (như băng)
+                    if (z.takeDamage) {
+                        // Xác định loại đạn để gây hiệu ứng
+                        const effectType = (p.type && p.type.includes('snow')) ? 'ice' : 'normal';
+                        z.takeDamage(p.power, effectType);
+                    } else {
+                        z.health -= p.power; 
+                    }
+                    
+                    p.delete = true; 
+                    break; 
                 }
             }
             if (p && p.delete) { this.projectiles.splice(i, 1); i--; }
@@ -507,7 +509,8 @@ export default class GameCore {
             );
 
             if (plant.isReadyToShoot && zombieInRowAndRange) { 
-                this.projectiles.push(new Projectile(plant.x + 70, plant.y + 35)); 
+                // Cây tự lấy damage từ thông số của nó
+                this.projectiles.push(new Projectile(plant.x + 70, plant.y + 35, plant.type, plant.damage)); 
                 plant.isReadyToShoot = false; 
             }
         }
@@ -611,7 +614,6 @@ export default class GameCore {
                 rewardCoinEl.innerText = data.reward; 
                 console.log(data.message);
 
-                // Ghi log lịch sử nhận thưởng vào hệ thống
                 if (auth.currentUser) {
                     saveLog(
                         auth.currentUser.uid,

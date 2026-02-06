@@ -197,14 +197,14 @@
             <div class="header">
                 <h1>🌻 Quản lý Cây & Zombie</h1>
                 <div>
-                    <button class="btn" style="background:#27ae60;" onclick="openPlantModal('plant')">+ Thêm Cây</button>
-                    <button class="btn" style="background:#8e44ad;" onclick="openPlantModal('zombie')">+ Thêm Zombie</button>
+                    <button class="btn" style="background:#27ae60;" onclick="openAddModal(); document.getElementById('gd_type').value='plants'; handleTypeChange();">+ Thêm Cây</button>
+                    <button class="btn" style="background:#8e44ad;" onclick="openAddModal(); document.getElementById('gd_type').value='zombies'; handleTypeChange();">+ Thêm Zombie</button>
                 </div>
             </div>
             
             <div style="margin-bottom: 20px;">
-                <button class="btn" style="background:#2ecc71;" onclick="filterGameData('plants')">Xem Danh Sách Cây</button>
-                <button class="btn" style="background:#95a5a6;" onclick="filterGameData('zombies')">Xem Danh Sách Zombie</button>
+                <button class="btn tab-btn active" style="background:#2ecc71;" onclick="filterGameData('plants')">Xem Danh Sách Cây</button>
+                <button class="btn tab-btn" style="background:#95a5a6;" onclick="filterGameData('zombies')">Xem Danh Sách Zombie</button>
             </div>
 
             <div class="table-container">
@@ -221,7 +221,7 @@
                         </tr>
                     </thead>
                     <tbody id="game-data-list">
-                        <tr><td colspan="7" style="text-align:center;">Đang tải dữ liệu từ Firebase...</td></tr>
+                        <tr><td colspan="7" style="text-align:center;">Đang tải dữ liệu từ Firestore...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -342,95 +342,87 @@
 
     <div id="modal-game-data" class="modal hidden modal-overlay-top">
         <div class="modal-box modal-large">
-            <h3 id="game-data-title" style="text-align:center;">Thêm Cây Mới</h3>
+            <span class="close" onclick="closeModal('modal-game-data')" style="float:right; cursor:pointer; font-size:1.5em;">&times;</span>
+            <h3 id="modal-title" style="text-align:center;">Thêm Dữ Liệu Mới</h3>
+            
             <form id="form-game-data">
-                <div class="plant-form-grid">
-                    <div>
-                        <div class="form-group">
-                            <label>Mã ID (Không dấu):</label>
-                            <input type="text" id="gd_id" class="form-control" placeholder="VD: peashooter" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Tên hiển thị:</label>
-                            <input type="text" id="gd_name" class="form-control" placeholder="VD: Đậu Bắn Súng" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Giá tiền (Sun):</label>
-                            <input type="number" id="gd_cost" class="form-control" value="100">
-                        </div>
-                        <div class="form-group">
-                            <label>Sát thương (Damage):</label>
-                            <input type="number" id="gd_damage" class="form-control" value="20">
-                        </div>
-                        <div class="form-group">
-                            <label>Tốc độ tấn công (giây):</label>
-                            <input type="number" id="gd_speed" class="form-control" value="1.5" step="0.1">
-                        </div>
-                        <div class="form-group">
-                            <label>Loại (Dùng để lọc):</label>
-                            <select id="gd_type" class="form-control" disabled>
-                                <option value="plants">Cây Trồng (Plant)</option>
-                                <option value="zombies">Thây Ma (Zombie)</option>
-                            </select>
-                        </div>
+                <div class="form-group">
+                    <label>Loại:</label>
+                    <select id="gd_type" class="form-control" onchange="handleTypeChange()">
+                        <option value="plants">Cây Trồng (Plant)</option>
+                        <option value="zombies">Zombie</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>ID (Viết liền không dấu, VD: peashooter):</label>
+                    <input type="text" id="gd_id" class="form-control" required placeholder="peashooter">
+                </div>
+                <div class="form-group">
+                    <label>Tên hiển thị:</label>
+                    <input type="text" id="gd_name" class="form-control" required placeholder="Peashooter">
+                </div>
+
+                <div id="group-plant-stats">
+                    <div class="form-group">
+                        <label>Giá tiền (Sun):</label>
+                        <input type="number" id="gd_cost" class="form-control" value="100">
                     </div>
+                </div>
 
-                    <div>
-                        <h4 style="margin-bottom:10px;">📂 Upload Hình Ảnh</h4>
-                        
-                        <div class="form-group">
-                            <label>1. Ảnh Thẻ Bài (Card) - Folder: assets/card</label>
-                            <input type="file" id="file_card" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_card')">
-                            <div class="image-preview-container">
-                                <div class="img-preview-box"><img id="prev_card" src=""></div>
-                            </div>
-                        </div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <div style="flex:1">
+                        <label>Sát thương (Damage):</label>
+                        <input type="number" id="gd_damage" class="form-control" value="20">
+                        <small style="color:#7f8c8d">0 nếu không tấn công</small>
+                    </div>
+                    <div style="flex:1">
+                        <label>Tốc độ (Speed):</label>
+                        <input type="number" id="gd_speed" class="form-control" value="1.5" step="0.1">
+                        <small style="color:#7f8c8d">Giây (Cây) / Tốc chạy (Zombie)</small>
+                    </div>
+                    <div style="flex:1">
+                        <label>Máu (HP):</label>
+                        <input type="number" id="gd_hp" class="form-control" value="100">
+                    </div>
+                </div>
 
-                        <div class="form-group">
-                            <label>2. Ảnh Nhân Vật (Plant/Zombie) - Folder: assets/plant</label>
-                            <input type="file" id="file_plant" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_plant')">
-                            <div class="image-preview-container">
-                                <div class="img-preview-box"><img id="prev_plant" src=""></div>
-                            </div>
-                        </div>
+                <h4 style="margin:15px 0 10px;">📂 Hình Ảnh</h4>
+                
+                <div class="form-group">
+                    <label>Ảnh Thẻ Bài / Avatar (assets/card):</label>
+                    <input type="file" id="file_card" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_card')">
+                    <input type="hidden" id="url_card_hidden">
+                    <div class="image-preview-container"><div class="img-preview-box"><img id="prev_card"></div></div>
+                </div>
 
-                        <div class="form-group" id="group_bullet_skin">
-                            <label>3. Ảnh Đạn (Bullet) - Folder: assets/pea</label>
-                            <input type="file" id="file_bullet" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_bullet')">
-                             <div class="image-preview-container">
-                                <div class="img-preview-box"><img id="prev_bullet" src=""></div>
-                            </div>
-                            
-                            <label style="margin-top:10px;">4. Ảnh Skin (Buff) - Folder: assets/skin</label>
-                            <input type="file" id="file_skin" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_skin')">
-                            <div class="image-preview-container">
-                                <div class="img-preview-box"><img id="prev_skin" src=""></div>
-                            </div>
-                        </div>
+                <div class="form-group">
+                    <label>Ảnh Trong Game (assets/plant hoặc zombie):</label>
+                    <input type="file" id="file_plant" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_plant')">
+                    <input type="hidden" id="url_plant_hidden">
+                    <div class="image-preview-container"><div class="img-preview-box"><img id="prev_plant"></div></div>
+                </div>
+                
+                <div id="group-bullet">
+                    <div class="form-group">
+                        <label>Ảnh Đạn (assets/pea) - Tùy chọn:</label>
+                        <input type="file" id="file_bullet" class="form-control" accept="image/*" onchange="previewImage(this, 'prev_bullet')">
+                        <input type="hidden" id="url_bullet_hidden">
+                        <div class="image-preview-container"><div class="img-preview-box"><img id="prev_bullet"></div></div>
                     </div>
                 </div>
 
                 <div class="modal-actions" style="margin-top:20px;">
-                    <button type="submit" class="btn" style="background:#27ae60;" id="btn-save-game-data">LƯU DỮ LIỆU</button>
+                    <button type="submit" id="btn-save-game-data" class="btn" style="background:#27ae60;">LƯU DỮ LIỆU</button>
                     <button type="button" class="btn" style="background:#95a5a6;" onclick="closeModal('modal-game-data')">Hủy</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="detailModal" class="modal hidden modal-large">
-        <div class="modal-box">
-            <h3>Chi tiết tài khoản</h3>
-            <div id="modal-user-info" style="background:#f8f9fa; padding:10px; margin-bottom:10px;"></div>
-            <div style="overflow-x:auto;">
-                <table class="admin-table"><tbody id="modal-logs-body"></tbody></table>
-            </div>
-            <button class="btn" onclick="closeModal('detailModal')" style="background:#95a5a6; width:100%; margin-top:10px;">Đóng</button>
-        </div>
-    </div>
-
     <script type="module" src="src/admin.js"></script>
-    <script type="module" src="src/admin/dashboard.js"></script>
+    <script type="module" src="src/dashboard.js"></script>
+    
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
@@ -439,28 +431,7 @@
             document.getElementById('menu-' + tabId).classList.add('active');
         }
 
-        window.openPlantModal = (type) => {
-            const modal = document.getElementById('modal-game-data');
-            const title = document.getElementById('game-data-title');
-            const typeSelect = document.getElementById('gd_type');
-            const bulletGroup = document.getElementById('group_bullet_skin');
-            
-            modal.classList.remove('hidden');
-            document.getElementById('form-game-data').reset();
-            // Reset ảnh preview
-            document.querySelectorAll('.img-preview-box img').forEach(img => img.src = "");
-
-            if (type === 'plant') {
-                title.innerText = "Thêm Cây Mới (Plant)";
-                typeSelect.value = "plants";
-                bulletGroup.style.display = 'block';
-            } else {
-                title.innerText = "Thêm Zombie Mới";
-                typeSelect.value = "zombies";
-                bulletGroup.style.display = 'none'; 
-            }
-        };
-
+        // Hàm preview ảnh (Local)
         window.previewImage = (input, imgId) => {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();

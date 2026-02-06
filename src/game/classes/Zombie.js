@@ -1,5 +1,6 @@
 import { CELL_WIDTH, CELL_HEIGHT, GAME_WIDTH, ZOMBIE_TYPES } from '../constants.js';
-import { images, customImages, drawSprite } from '../Resources.js'; // [MỚI] Import customImages
+import { images, customImages, drawSprite } from '../Resources.js'; 
+import { PLANT_DATA } from '../../plantsData.js'; // [MỚI] Import dữ liệu động
 
 export class Zombie {
     /**
@@ -11,47 +12,96 @@ export class Zombie {
         this.y = verticalPosition;
         this.width = CELL_WIDTH;
         this.height = CELL_HEIGHT;
-
-        // [CẬP NHẬT] Lấy thông số an toàn
-        // Nếu loại zombie này chưa có trong file constants, dùng chỉ số mặc định
-        const defaultStats = { speed: 0.2, health: 100, damage: 1, color: 'green', reward: 10 };
-        const stats = ZOMBIE_TYPES[type] || defaultStats;
-        
         this.type = type;
+
+        // [LOGIC MỚI] Xử lý thống kê (Stats) theo thứ tự ưu tiên:
+        // 1. Dữ liệu từ Admin (PLANT_DATA)
+        // 2. Dữ liệu cứng (ZOMBIE_TYPES)
+        // 3. Mặc định an toàn
+        
+        let stats = {};
+        const dynamicData = PLANT_DATA[type]; // Dữ liệu tải từ Firestore
+        const constantData = ZOMBIE_TYPES[type]; // Dữ liệu cứng
+
+        if (dynamicData && dynamicData.stats) {
+            // Nếu có dữ liệu từ Admin -> Dùng nó
+            stats = {
+                speed: dynamicData.stats.speed || 0.2,
+                health: dynamicData.stats.hp || 100, // Admin lưu là 'hp'
+                damage: dynamicData.stats.damage || 1,
+                reward: 10, // Hiện tại Admin chưa chỉnh reward, để mặc định
+                color: 'green'
+            };
+        } else if (constantData) {
+            // Fallback về dữ liệu cứng
+            stats = constantData;
+        } else {
+            // Fallback cuối cùng
+            stats = { speed: 0.2, health: 100, damage: 1, color: 'green', reward: 10 };
+        }
+        
+        // Gán chỉ số
         this.speed = stats.speed;
         this.movement = this.speed;
         this.health = stats.health;
         this.maxHealth = stats.health;
         this.damage = stats.damage;
-        this.color = stats.color;
+        this.color = stats.color || 'green';
         this.reward = stats.reward;
 
         this.delete = false;
+        
+        // Hiệu ứng trạng thái
+        this.isFrozen = false;
+        this.frozenTimer = 0;
     }
 
     update() {
         this.x -= this.movement;
+
+        // Logic bị đóng băng (Ice Pea)
+        if (this.isFrozen) {
+            this.frozenTimer++;
+            if (this.frozenTimer > 120) { // 2 giây (60fps * 2)
+                this.isFrozen = false;
+                this.movement = this.speed; // Hết đóng băng -> Tốc độ thường
+                this.frozenTimer = 0;
+            } else {
+                this.movement = this.speed * 0.5; // Giảm tốc 50%
+            }
+        }
+
+        // Nếu đi quá màn hình bên trái -> Xóa
         if (this.x < 0 - this.width) {
             this.delete = true;
         }
     }
 
     draw(ctx) {
-        // [MỚI] 1. Ưu tiên chọn ảnh ĐỘNG từ Admin (customImages)
-        // Nếu bạn thêm zombie ID "football", nó sẽ tìm customImages['football']
+        // 1. Ưu tiên chọn ảnh ĐỘNG từ Admin (customImages)
         let currentImg = customImages[this.type];
 
         // 2. Fallback: Nếu không có ảnh động thì dùng ảnh tĩnh cũ
         if (!currentImg) {
             if (this.type === 'conehead') currentImg = images.conehead;
             else if (this.type === 'buckethead') currentImg = images.buckethead;
-            else currentImg = images.zombie; // Mặc định là zombie thường
+            else currentImg = images.zombie; // Mặc định
         }
 
-        // 3. Vẽ Zombie
+        // 3. Hiệu ứng đóng băng (Vẽ màu xanh lam đè lên)
+        if (this.isFrozen) {
+            ctx.save();
+            ctx.filter = 'hue-rotate(180deg) brightness(1.2)'; 
+        }
+
+        // 4. Vẽ Zombie
         drawSprite(ctx, currentImg, this.x, this.y, this.width, this.height, this.color);
 
-        // 4. Vẽ thanh máu (Chỉ vẽ khi máu không đầy)
+        if (this.isFrozen) {
+            ctx.restore();
+        }
+
+        // 5. Vẽ thanh máu (Chỉ vẽ khi máu không đầy)
         if (this.health < this.maxHealth) {
             // Khung đỏ nền
             ctx.fillStyle = 'red';
@@ -62,10 +112,20 @@ export class Zombie {
             ctx.fillStyle = '#00ff00';
             ctx.fillRect(this.x + 15, this.y - 10, (this.width - 30) * healthPercent, 8);
             
-            // Viền đen cho rõ
+            // Viền đen
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 1;
             ctx.strokeRect(this.x + 15, this.y - 10, this.width - 30, 8);
+        }
+    }
+    
+    // Hàm nhận sát thương (Dùng cho đạn bắn trúng)
+    takeDamage(amount, effectType = 'normal') {
+        this.health -= amount;
+        
+        if (effectType === 'ice') {
+            this.isFrozen = true;
+            this.frozenTimer = 0;
         }
     }
 }
