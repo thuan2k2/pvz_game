@@ -1,8 +1,8 @@
 // file: src/plantsData.js
-import { db } from './firebase/config.js'; // [SỬA] Dùng db (Firestore) thay vì database
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { db } from './firebase/config.js'; 
+// [SỬA LỖI] Dùng 'firebase/firestore' thay vì link https://...
+import { collection, getDocs } from "firebase/firestore";
 
-// [GIỮ NGUYÊN] Cấu trúc dữ liệu cũ để game không bị lỗi khi chưa load mạng
 export const PLANT_DATA = {
     "peashooter": {
         name: "Peashooter",
@@ -41,12 +41,10 @@ export const PLANT_DATA = {
     }
 };
 
-// [SỬA] Hàm tải dữ liệu từ Firestore (Đồng bộ với Admin.js)
 export async function fetchPlantsFromServer() {
     try {
         console.log("📡 Đang tải dữ liệu cây từ Firestore...");
         
-        // Gọi lên collection 'game_data' nơi Admin đã lưu
         const querySnapshot = await getDocs(collection(db, "game_data"));
 
         if (querySnapshot.empty) {
@@ -56,28 +54,22 @@ export async function fetchPlantsFromServer() {
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            const id = data.id; // VD: "peashooter"
+            const id = data.id;
 
-            // Chỉ xử lý nếu là plants
             if (!data.type || data.type === 'plants') {
-                // [QUAN TRỌNG] Chuyển đổi dữ liệu phẳng từ Admin sang cấu trúc lồng nhau của Game
                 PLANT_DATA[id] = {
                     name: data.name || "Unknown",
-                    // Admin lưu là 'price', Game dùng 'cost' -> Cần map lại
                     cost: Number(data.price) || 100, 
-                    
                     assets: {
-                        // Admin lưu đường dẫn full, Game gán vào đây
                         card: data.cardImage || `assets/card/${id}.png`,
                         plant: data.plantImage || `assets/plant/${id}.png`,
                         bullet: data.bulletImage || `assets/pea/Pea.png`,
                         skin: null
                     },
-                    
                     stats: {
                         damage: Number(data.damage) || 20,
                         speed: Number(data.speed) || 1.5,
-                        range: "line" // Mặc định là bắn thẳng, sau này có thể thêm option trong Admin
+                        range: "line"
                     }
                 };
             }
@@ -88,7 +80,6 @@ export async function fetchPlantsFromServer() {
 
     } catch (error) {
         console.error("❌ Lỗi tải dữ liệu cây:", error);
-        // Không return false để game vẫn tiếp tục chạy với dữ liệu mặc định
         return false;
     }
 }

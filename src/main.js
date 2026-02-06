@@ -1,12 +1,12 @@
 // src/main.js
 import { monitorAuthState, logoutUser, listenToUserData } from './firebase/auth.js';
 import { auth, db } from './firebase/config.js'; 
-import { signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { doc, onSnapshot, collection, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'; 
-// Đảm bảo đường dẫn này đúng với cấu trúc thực tế
+// [SỬA LỖI] Đổi về import từ node_modules
+import { signOut } from 'firebase/auth';
+import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'; 
+
 import GameCore from './game/GameCore.js'; 
 import { loadImages } from './game/Resources.js';
-// [MỚI] Import hàm tải dữ liệu cây từ Server (Sẽ tạo ở bước sau)
 import { fetchPlantsFromServer } from './plantsData.js';
 
 const ui = {
@@ -30,7 +30,7 @@ const ui = {
 let unsubscribeUser = null;
 let unsubscribeSystem = null; 
 let maintenanceInterval = null; 
-let gameInstance = null; // Biến lưu instance game để tránh tạo trùng
+let gameInstance = null; 
 
 let currentState = {
     userRole: null, 
@@ -41,21 +41,18 @@ let currentState = {
 // --- 1. LOGIC AUTH & REALTIME UPDATE ---
 monitorAuthState(async (user) => {
     
-    // [QUAN TRỌNG] Tải dữ liệu Cây/Zombie từ Server trước khi làm gì khác
-    // Việc này ngăn lỗi "undefined plant" khi vào game
+    // Tải dữ liệu Cây/Zombie từ Server
     try {
         await fetchPlantsFromServer();
-        console.log("Dữ liệu cây đã tải xong.");
     } catch (e) {
         console.error("Lỗi tải dữ liệu cây:", e);
     }
 
-    // LẮNG NGHE THÔNG BÁO ĐẠI GIA (SERVER BROADCAST)
+    // LẮNG NGHE THÔNG BÁO ĐẠI GIA
     const qBroadcast = query(collection(db, "server_broadcasts"), orderBy("timestamp", "desc"), limit(1));
     onSnapshot(qBroadcast, (snapshot) => {
         if (!snapshot.empty) {
             const data = snapshot.docs[0].data();
-            // Chỉ hiện nếu tin nhắn mới (trong vòng 15 giây qua)
             if (data.timestamp) {
                 const now = new Date().getTime();
                 const msgTime = data.timestamp.toMillis();
@@ -95,7 +92,6 @@ monitorAuthState(async (user) => {
 
             currentState.userRole = userData.role || 'user';
             
-            // Cập nhật dữ liệu vào LocalStorage để GameCore sử dụng
             localStorage.setItem('item_plant_food_count', userData.item_plant_food_count || 0);
             localStorage.setItem('user_inventory', JSON.stringify(userData.inventory || []));
             
@@ -147,11 +143,10 @@ monitorAuthState(async (user) => {
         }
     }
 
-    // Khởi tạo sự kiện game (chỉ chạy 1 lần)
     initGameEvents();
 });
 
-// [FIX] HÀM HIỂN THỊ HIỆU ỨNG ĐẠI GIA (SỬ DỤNG CSS KEYFRAMES)
+// HÀM HIỂN THỊ HIỆU ỨNG ĐẠI GIA
 function showBigSpenderEffect(message) {
     const oldStyle = document.getElementById('vip-marquee-style');
     if (oldStyle) oldStyle.remove();
@@ -206,7 +201,6 @@ function showBigSpenderEffect(message) {
 }
 
 function activeGuestMode() {
-    console.log("Kích hoạt chế độ Khách");
     currentState.userRole = 'guest';
     currentState.isGuestActive = true;
 
@@ -329,9 +323,7 @@ function updateUserUI(email, coins, vncoin, role) {
     }
 }
 
-// --- 4. HÀM KHỞI TẠO GAME & SỰ KIỆN ---
 function initGameEvents() {
-    // Đảm bảo chỉ gắn sự kiện 1 lần
     if (window.isGameInitialized) return;
     window.isGameInitialized = true;
 
@@ -376,7 +368,6 @@ function initGameEvents() {
             }
             document.getElementById('lobby-screen').classList.add('hidden');
             
-            // Khởi tạo GameCore mới mỗi lần bấm Start để reset game
             if (!gameInstance) {
                 gameInstance = new GameCore(ui.canvas);
             }
@@ -392,7 +383,7 @@ function initGameEvents() {
         });
     }
 
-    // SỰ KIỆN GAME & PAUSE (Kiểm tra null an toàn)
+    // SỰ KIỆN GAME & PAUSE
     const btnPause = document.getElementById('btn-pause-game');
     if (btnPause) btnPause.addEventListener('click', () => { if(gameInstance) gameInstance.togglePause(); });
 
