@@ -23,7 +23,6 @@ export default class GameCore {
         this.ctx = canvas.getContext('2d');
         this.animationId = null;
         
-        // Trạng thái game
         this.isPaused = false;
         this.gameOverState = false;
         this.victoryState = false;
@@ -216,6 +215,7 @@ export default class GameCore {
         container.style.overflowX = 'auto'; 
         container.style.alignItems = 'center';
         
+        // Chỉ lấy dữ liệu Cây từ Admin (type = plants)
         const plantsArray = Object.entries(PLANT_DATA).filter(([id, data]) => {
             return (data.type === 'plants' || !data.type) && data.cost !== undefined;
         });
@@ -311,6 +311,7 @@ export default class GameCore {
             this.cooldownTimer--;
             if (this.cooldownTimer <= 0) {
                 this.isWaveCooldown = false;
+                // Vẫn dùng config wave để lấy thời gian, nhưng không lấy danh sách zombie cứng
                 const config = WAVE_CONFIG[this.currentWaveIndex];
                 if (config) {
                     this.waveDuration = this.getRandomDuration(config.minDuration, config.maxDuration);
@@ -332,8 +333,18 @@ export default class GameCore {
 
             if (this.spawnTimer >= currentRate) {
                 this.spawnTimer = 0;
-                const typeIndex = Math.floor(Math.random() * config.zombies.length);
-                const zombieType = config.zombies[typeIndex];
+                
+                // [FIX QUAN TRỌNG] Chỉ chọn Zombie từ danh sách Admin
+                const availableZombies = Object.keys(PLANT_DATA).filter(key => PLANT_DATA[key].type === 'zombies');
+                
+                let zombieType;
+                if (availableZombies.length > 0) {
+                    // Chọn ngẫu nhiên
+                    zombieType = availableZombies[Math.floor(Math.random() * availableZombies.length)];
+                } else {
+                    console.warn("Chưa có zombie nào trong Admin!");
+                    return; 
+                }
                 
                 const randomRow = Math.floor(Math.random() * GRID_ROWS);
                 const verticalPosition = (randomRow * CELL_HEIGHT) + TOP_OFFSET;
@@ -434,12 +445,10 @@ export default class GameCore {
             
             for (let j = 0; j < this.plants.length; j++) {
                 const p = this.plants[j];
-                // Thêm logic va chạm cho cây nổ hoặc mìn (behavior: mine, instant_kill)
                 if (z.y === p.y && collision(z, p)) { 
                     z.movement = 0; 
                     p.health -= z.damage; 
                     
-                    // Nếu là mìn đã kích hoạt -> Nổ ngay khi chạm zombie
                     if (p.behavior === 'mine' && p.isArmed) {
                         p.isReadyToExplode = true;
                     }
@@ -483,19 +492,16 @@ export default class GameCore {
             plant.draw(this.ctx); 
             plant.update();
             
-            // Xử lý chết (hết máu)
             if (plant.health <= 0) { 
                 this.plants.splice(i, 1); 
                 i--; continue; 
             }
             
-            // Xử lý nổ (Mìn, Cherry Bomb, Squash)
             if (plant.isReadyToExplode) { 
                 this.triggerExplosion(plant); 
-                plant.health = 0; continue; // Cây chết sau khi nổ
+                plant.health = 0; continue; 
             }
             
-            // Xử lý sinh nắng (Sunflower)
             if (plant.isReadyToProduceSun) { 
                 const newSun = new Sun(plant.x, plant.y + 10, plant.y + 10, false);
                 this.suns.push(newSun);
@@ -503,7 +509,6 @@ export default class GameCore {
                 plant.isReadyToProduceSun = false; 
             }
             
-            // Xử lý bắn đạn (Shooter, Lobbed, Slow)
             const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
             const zombieInRowAndRange = this.zombies.some(z => 
                 z.y === plant.y && 
@@ -511,23 +516,21 @@ export default class GameCore {
                 z.x > plant.x
             );
 
-            // Điều kiện bắn: Phải sẵn sàng và có zombie trong tầm (cùng hàng)
             if (plant.isReadyToShoot && zombieInRowAndRange) { 
-                // Xác định loại đạn dựa trên hành vi
                 let projectileType = 'normal';
-                if (plant.behavior === 'lobbed') projectileType = 'lobbed'; // Cong
-                else if (plant.behavior === 'slow') projectileType = 'snow_pea'; // Băng
+                if (plant.behavior === 'lobbed') projectileType = 'lobbed'; 
+                else if (plant.behavior === 'slow') projectileType = 'snow_pea'; 
 
                 this.projectiles.push(new Projectile(
                     plant.x + 70, 
                     plant.y + 35, 
-                    plant.type, // ID để lấy ảnh đạn
+                    plant.type, 
                     plant.damage,
-                    projectileType // Kiểu bay
+                    projectileType 
                 )); 
                 
                 plant.isReadyToShoot = false; 
-                plant.timer = 0; // Reset timer bắn
+                plant.timer = 0; 
             }
         }
     }
@@ -549,14 +552,13 @@ export default class GameCore {
     }
 
     triggerExplosion(bombPlant) {
-        // [CẬP NHẬT] Phạm vi nổ tùy loại
         let rangeX = 1; 
         let rangeY = 1;
 
         if (bombPlant.behavior === 'instant_kill') {
-            rangeX = 3; rangeY = 3; // Cherry Bomb nổ 3x3
+            rangeX = 3; rangeY = 3; 
         } else if (bombPlant.behavior === 'mine' || bombPlant.behavior === 'squash') {
-            rangeX = 1; rangeY = 1; // Mìn chỉ nổ 1 ô
+            rangeX = 1; rangeY = 1; 
         }
 
         const explosionRect = { 
