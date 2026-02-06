@@ -14,7 +14,7 @@ import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
 import { callEndGameReward, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
-// Import dữ liệu cây động (Chứa cả Plant và Zombie từ Admin)
+// [QUAN TRỌNG] Import dữ liệu
 import { PLANT_DATA } from '../plantsData.js'; 
 
 export default class GameCore {
@@ -39,8 +39,9 @@ export default class GameCore {
         
         this.mouse = { x: undefined, y: undefined, width: 0.1, height: 0.1 };
         
+        // Mặc định null, sẽ set sau khi render shop
         this.selectedTool = 'plant';
-        this.selectedPlantType = 'peashooter'; 
+        this.selectedPlantType = null; 
 
         this.currentWaveIndex = 0;
         this.waveTimer = 0;        
@@ -49,11 +50,9 @@ export default class GameCore {
         this.cooldownTimer = 0;      
         this.spawnTimer = 0;        
 
-        // Timer cho mặt trời rơi từ trên trời
         this.skySunTimer = 0;
         this.skySunInterval = this.getRandomSkySunTime();
 
-        // Quản lý số lượng Plant Food
         this.plantFoodCount = 0;
 
         this.handleMouseMove = this.handleMouseMove.bind(this);
@@ -77,20 +76,23 @@ export default class GameCore {
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('click', this.handleMouseClick);
         
-        // Xử lý chọn cây (Dynamic)
+        // Xử lý chọn cây (Event Delegation)
         document.body.addEventListener('click', (e) => {
             const card = e.target.closest('.plant-card'); 
             if (card) {
-                // Xóa selected cũ
-                document.querySelectorAll('.plant-card').forEach(c => c.classList.remove('selected'));
+                // Xóa active cũ
+                document.querySelectorAll('.plant-card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.style.borderColor = 'transparent'; // Reset viền
+                });
                 document.getElementById('shovel-tool').classList.remove('selected');
                 document.getElementById('plant-food-tool').classList.remove('selected');
                 
-                // Active cái mới
+                // Active mới
                 card.classList.add('selected');
+                card.style.borderColor = 'gold'; // Highlight màu vàng
                 this.selectedTool = 'plant';
                 
-                // Lấy ID cây
                 const type = card.getAttribute('data-type');
                 if(type) this.selectedPlantType = type;
             }
@@ -102,7 +104,10 @@ export default class GameCore {
                 this.selectedTool = 'shovel';
                 shovelBtn.classList.add('selected');
                 document.getElementById('plant-food-tool').classList.remove('selected');
-                document.querySelector('.plant-card.selected')?.classList.remove('selected');
+                document.querySelectorAll('.plant-card').forEach(c => {
+                    c.classList.remove('selected');
+                    c.style.borderColor = 'transparent';
+                });
             });
         }
 
@@ -116,7 +121,10 @@ export default class GameCore {
                     this.selectedTool = 'plant_food';
                     pfBtn.classList.add('selected');
                     document.getElementById('shovel-tool').classList.remove('selected');
-                    document.querySelector('.plant-card.selected')?.classList.remove('selected');
+                    document.querySelectorAll('.plant-card').forEach(c => {
+                        c.classList.remove('selected');
+                        c.style.borderColor = 'transparent';
+                    });
                 } else {
                     console.log("Hết thuốc rồi!");
                 }
@@ -156,25 +164,20 @@ export default class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        // LOGIC KIỂM TRA GÓI MẶT TRỜI
+        // Check Sun Pack
         const inventory = JSON.parse(localStorage.getItem('user_inventory') || '[]');
         const tempItems = JSON.parse(localStorage.getItem('user_temp_items') || '{}');
         const settings = JSON.parse(localStorage.getItem('user_item_settings') || '{}');
 
         let hasSunPack = false;
-
         if (inventory.includes('sun_pack')) {
             hasSunPack = true;
         } else if (tempItems.sun_pack) {
             const now = Date.now();
-            if (tempItems.sun_pack > now) {
-                hasSunPack = true;
-            }
+            if (tempItems.sun_pack > now) hasSunPack = true;
         }
 
-        const isEnabled = settings.sun_pack !== false; 
-
-        if (hasSunPack && isEnabled) {
+        if (hasSunPack && settings.sun_pack !== false) {
             this.sun += 100;
             console.log("🌞 Đã kích hoạt Gói Mặt Trời (+100 Sun)");
         }
@@ -183,12 +186,10 @@ export default class GameCore {
         this.updatePlantFoodUI();
         
         this.frame = 0;
-        
         this.plants = [];
         this.zombies = [];
         this.projectiles = [];
         this.suns = [];
-        
         this.skySunTimer = 0;
         this.skySunInterval = this.getRandomSkySunTime();
 
@@ -202,47 +203,76 @@ export default class GameCore {
         document.getElementById('bottom-toolbar').classList.remove('hidden');
         document.getElementById('btn-pause-game').classList.remove('hidden');
         
-        // [QUAN TRỌNG] Render thanh chọn cây khi bắt đầu game
+        // [FIX UI] Render lại shop bar
         this.renderPlantShopBar();
 
         this.animate();
     }
 
-    // [FIX] Hàm vẽ thanh chọn cây: Lọc chỉ hiện 'plants' và sắp xếp
+    // [FIX LỖI UI DÍNH CHÙM] - Thêm CSS trực tiếp vào JS
     renderPlantShopBar() {
         const container = document.getElementById('plant-shop-bar'); 
         if (!container) return;
         
         container.innerHTML = ''; 
         
-        // 1. Chuyển đổi PLANT_DATA thành mảng để dễ xử lý
-        // 2. Lọc: Chỉ lấy item có type là 'plants' (hoặc undefined nếu là dữ liệu cũ) và có giá tiền
+        // 1. [QUAN TRỌNG] Áp dụng Style Flexbox để nằm ngang và có khoảng cách
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.gap = '10px';
+        container.style.padding = '5px';
+        container.style.overflowX = 'auto'; // Cho phép cuộn ngang nếu quá nhiều cây
+        container.style.alignItems = 'center';
+        
+        // 2. Lọc chỉ lấy Cây (type = plants) và có giá tiền
+        // Loại bỏ các item không phải cây (như zombie hoặc item rác)
         const plantsArray = Object.entries(PLANT_DATA).filter(([id, data]) => {
             return (data.type === 'plants' || !data.type) && data.cost !== undefined;
         });
 
-        // 3. Sắp xếp: Cây rẻ lên trước, đắt ra sau
+        // 3. Sắp xếp giá tăng dần
         plantsArray.sort((a, b) => a[1].cost - b[1].cost);
 
-        // 4. Render
-        plantsArray.forEach(([id, plant]) => {
+        if (plantsArray.length === 0) {
+            console.warn("⚠️ Không tìm thấy cây nào trong PLANT_DATA!");
+        }
+
+        // 4. Render thẻ bài
+        plantsArray.forEach(([id, plant], index) => {
             const card = document.createElement('div');
             card.className = 'plant-card';
             card.setAttribute('data-type', id);
             
-            // Auto-select cây đầu tiên (thường là peashooter hoặc cây rẻ nhất)
-            if(id === this.selectedPlantType || (!this.selectedPlantType && id === 'peashooter')) {
+            // [QUAN TRỌNG] CSS cho từng thẻ bài để không bị co rúm
+            card.style.position = 'relative';
+            card.style.width = '70px';  // Chiều rộng cố định
+            card.style.height = '90px'; // Chiều cao cố định
+            card.style.border = '2px solid transparent';
+            card.style.borderRadius = '5px';
+            card.style.cursor = 'pointer';
+            card.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            card.style.flexShrink = '0'; // Ngăn không cho thẻ bị co lại khi hết chỗ
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.alignItems = 'center';
+            card.style.justifyContent = 'center';
+
+            // Auto-select cây đầu tiên
+            if (index === 0) {
                 card.classList.add('selected');
+                card.style.borderColor = 'gold';
                 this.selectedPlantType = id;
             }
 
-            // Xử lý ảnh (Hỗ trợ cả link online và link local)
+            // Xử lý link ảnh
             let imgSrc = plant.assets.card;
-            if(!imgSrc.startsWith('http') && !imgSrc.includes('assets/')) imgSrc = `/assets/card/${imgSrc}`;
+            if(imgSrc && !imgSrc.startsWith('http') && !imgSrc.includes('assets/')) imgSrc = `/assets/card/${imgSrc}`;
+            // Fallback ảnh nếu lỗi
+            const fallbackSrc = 'assets/card/Peashooter.png';
 
             card.innerHTML = `
-                <div class="card-cost">${plant.cost}</div>
-                <img src="${imgSrc}" alt="${plant.name}" onerror="this.src='assets/card/Sunflower.png'">
+                <div class="card-cost" style="position:absolute; bottom:2px; right:2px; font-size:14px; font-weight:bold; color:black; text-shadow:0 0 2px white; background:rgba(255,255,255,0.7); padding:0 2px; border-radius:2px;">${plant.cost}</div>
+                <img src="${imgSrc}" alt="${plant.name}" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='${fallbackSrc}'">
             `;
             container.appendChild(card);
         });
@@ -324,7 +354,6 @@ export default class GameCore {
                 const randomRow = Math.floor(Math.random() * GRID_ROWS);
                 const verticalPosition = (randomRow * CELL_HEIGHT) + TOP_OFFSET;
                 
-                // Gọi Zombie mới (Zombie class đã được update để tự lấy stats từ PLANT_DATA)
                 const newZombie = new Zombie(verticalPosition, zombieType);
                 newZombie.x = GAME_WIDTH;
                 this.zombies.push(newZombie);
@@ -344,7 +373,6 @@ export default class GameCore {
     }
 
     handleMouseClick() {
-        // 1. Xử lý nhặt mặt trời
         let sunClicked = false;
         for (let i = 0; i < this.suns.length; i++) {
             if (collision(this.suns[i], {x: this.mouse.x, y: this.mouse.y, width: 0.1, height: 0.1})) {
@@ -357,7 +385,6 @@ export default class GameCore {
         }
         if (sunClicked) return;
 
-        // 2. Tính toán vị trí Grid
         const relativeX = this.mouse.x - GRID_START_X;
         const relativeY = this.mouse.y - TOP_OFFSET;
 
@@ -371,20 +398,15 @@ export default class GameCore {
         const gridPositionX = GRID_START_X + (col * CELL_WIDTH);
         const gridPositionY = TOP_OFFSET + (row * CELL_HEIGHT);
 
-        // 3. Xử lý dùng Plant Food
+        // Power UP
         if (this.selectedTool === 'plant_food') {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
                     this.plants[i].activatePower();
-                    
                     this.plantFoodCount--; 
                     localStorage.setItem('item_plant_food_count', this.plantFoodCount); 
                     this.updatePlantFoodUI();
-                    
-                    if (auth.currentUser) {
-                        useGameItem(auth.currentUser.uid, 'plant_food');
-                    }
-                    
+                    if (auth.currentUser) useGameItem(auth.currentUser.uid, 'plant_food');
                     this.selectedTool = 'plant';
                     document.getElementById('plant-food-tool').classList.remove('selected');
                     return;
@@ -393,7 +415,7 @@ export default class GameCore {
             return;
         }
 
-        // 4. Xử lý Xẻng
+        // Shovel
         if (this.selectedTool === 'shovel') {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
@@ -404,21 +426,19 @@ export default class GameCore {
             return;
         }
 
-        // 5. Kiểm tra ô đã có cây chưa
         for (let i = 0; i < this.plants.length; i++) {
             if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) return; 
         }
 
-        // 6. TRỒNG CÂY
+        // TRỒNG CÂY
+        if (!this.selectedPlantType) return;
         const plantInfo = PLANT_DATA[this.selectedPlantType];
         
-        // Kiểm tra kỹ: Phải có info và phải là loại 'plants' (tránh trồng nhầm zombie vào ô)
-        if (plantInfo && (plantInfo.type === 'plants' || !plantInfo.type)) {
+        if (plantInfo) {
             if (this.sun >= plantInfo.cost) {
                 this.plants.push(new Plant(gridPositionX, gridPositionY, this.selectedPlantType, plantInfo));
                 this.sun -= plantInfo.cost;
             } else {
-                // Có thể thêm hiệu ứng âm thanh fail tại đây
                 console.log("Không đủ sun!"); 
             }
         }
@@ -440,7 +460,6 @@ export default class GameCore {
             }
             
             if (z.x < -50) this.endGame(false);
-            
             if (z.health <= 0) { this.score += z.reward; this.zombies.splice(i, 1); i--; }
         }
     }
@@ -454,18 +473,13 @@ export default class GameCore {
                 const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
                 const isZombieInStreet = z.x > GRID_RIGHT_EDGE + 10; 
 
-                // Kiểm tra va chạm (Thêm điều kiện zombie phải vào sân mới bắn trúng để công bằng)
                 if (collision(p, z) && !isZombieInStreet) { 
-                    // Zombie nhận damage
-                    // Gọi hàm takeDamage của Zombie class để xử lý hiệu ứng (như băng)
                     if (z.takeDamage) {
-                        // Xác định loại đạn để gây hiệu ứng
                         const effectType = (p.type && p.type.includes('snow')) ? 'ice' : 'normal';
                         z.takeDamage(p.power, effectType);
                     } else {
                         z.health -= p.power; 
                     }
-                    
                     p.delete = true; 
                     break; 
                 }
@@ -484,16 +498,12 @@ export default class GameCore {
             
             if (plant.health <= 0) { 
                 this.plants.splice(i, 1); 
-                i--; 
-                continue; 
+                i--; continue; 
             }
-            
             if (plant.isReadyToExplode) { 
                 this.triggerExplosion(plant); 
-                plant.health = 0; 
-                continue; 
+                plant.health = 0; continue; 
             }
-            
             if (plant.isReadyToProduceSun) { 
                 const newSun = new Sun(plant.x, plant.y + 10, plant.y + 10, false);
                 this.suns.push(newSun);
@@ -502,14 +512,9 @@ export default class GameCore {
             }
             
             const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
-            const zombieInRowAndRange = this.zombies.some(z => 
-                z.y === plant.y && 
-                z.x < GRID_RIGHT_EDGE + 20 && 
-                z.x > plant.x
-            );
+            const zombieInRowAndRange = this.zombies.some(z => z.y === plant.y && z.x < GRID_RIGHT_EDGE + 20 && z.x > plant.x);
 
             if (plant.isReadyToShoot && zombieInRowAndRange) { 
-                // Cây tự lấy damage từ thông số của nó
                 this.projectiles.push(new Projectile(plant.x + 70, plant.y + 35, plant.type, plant.damage)); 
                 plant.isReadyToShoot = false; 
             }
@@ -525,14 +530,10 @@ export default class GameCore {
             this.skySunTimer = 0;
             this.skySunInterval = this.getRandomSkySunTime();
         }
-
         for (let i = 0; i < this.suns.length; i++) {
             this.suns[i].update(); 
             this.suns[i].draw(this.ctx);
-            if (this.suns[i].delete) { 
-                this.suns.splice(i, 1); 
-                i--; 
-            }
+            if (this.suns[i].delete) { this.suns.splice(i, 1); i--; }
         }
     }
 
