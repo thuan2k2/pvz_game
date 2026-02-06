@@ -363,6 +363,21 @@
                     <input type="text" id="gd_name" class="form-control" required placeholder="Peashooter">
                 </div>
 
+                <div class="form-group" id="group-behavior">
+                    <label style="color:#e67e22; font-weight:bold;">⚙️ Chức năng / Hành vi của cây:</label>
+                    <select id="gd_behavior" class="form-control" onchange="toggleBehaviorFields()">
+                        <option value="shooter">🔫 Bắn thẳng (Peashooter, Repeater)</option>
+                        <option value="lobbed">🌽 Bắn cầu vồng/Cong (Cabbage, Melon, Kernel)</option>
+                        <option value="producer">🌻 Sản xuất Nắng (Sunflower)</option>
+                        <option value="wall">🛡️ Phòng thủ/Bị động (Wall-nut)</option>
+                        <option value="mine">💣 Mìn nổ chậm (Potato Mine)</option>
+                        <option value="instant_kill">⚡ Nổ ngay lập tức (Cherry Bomb, Jalapeno)</option>
+                        <option value="squash">🍆 Đè bẹp Zombie (Squash)</option>
+                        <option value="slow">❄️ Bắn làm chậm (Snow Pea)</option>
+                    </select>
+                    <small style="color:#7f8c8d; font-style:italic;">Chọn đúng loại để cây hoạt động đúng logic trong game.</small>
+                </div>
+
                 <div id="group-plant-stats">
                     <div class="form-group">
                         <label>Giá tiền (Sun):</label>
@@ -377,9 +392,9 @@
                         <small style="color:#7f8c8d">0 nếu không tấn công</small>
                     </div>
                     <div style="flex:1">
-                        <label>Tốc độ (Speed):</label>
+                        <label id="lbl_speed">Tốc độ (Giây):</label>
                         <input type="number" id="gd_speed" class="form-control" value="1.5" step="0.1">
-                        <small style="color:#7f8c8d">Giây (Cây) / Tốc chạy (Zombie)</small>
+                        <small id="hint_speed" style="color:#7f8c8d">Thời gian hồi chiêu / đẻ nắng</small>
                     </div>
                     <div style="flex:1">
                         <label>Máu (HP):</label>

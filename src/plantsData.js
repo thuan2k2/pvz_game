@@ -1,54 +1,21 @@
 // file: src/plantsData.js
 import { db } from './firebase/config.js'; 
-// [SỬA LỖI] Dùng 'firebase/firestore' thay vì link https://...
 import { collection, getDocs } from "firebase/firestore";
 
-export const PLANT_DATA = {
-    "peashooter": {
-        name: "Peashooter",
-        cost: 100,
-        assets: {
-            card: "assets/card/Peashooter.png",      
-            plant: "assets/plant/Peashooter.png",     
-            bullet: "assets/pea/Pea.png",            
-            skin: "assets/skin/Peashooter Goal.png"   
-        },
-        stats: { damage: 20, speed: 1.5, range: "line" }
-    },
-
-    "cabbage_pult": {
-        name: "Cabbage Pult",
-        cost: 100,
-        assets: {
-            card: "assets/card/Cabbage-pult.png",     
-            plant: "assets/plant/Cabbage-pult.png",    
-            bullet: "assets/pea/Cabbage.png",        
-            skin: null                    
-        },
-        stats: { damage: 40, speed: 2.0, range: "lob" } 
-    },
-
-    "melon_pult": {
-        name: "Melon Pult",
-        cost: 300,
-        assets: {
-            card: "assets/card/Melon-pult.png",       
-            plant: "assets/plant/Melon-pult.png",      
-            bullet: "assets/pea/Melon.png",          
-            skin: "assets/skin/Winter Melon.png"      
-        },
-        stats: { damage: 80, speed: 2.5, range: "lob" }
-    }
-};
+// [FIX] Khởi tạo rỗng hoàn toàn để không hiện cây lạ khi chưa tải xong
+export const PLANT_DATA = {};
 
 export async function fetchPlantsFromServer() {
     try {
         console.log("📡 Đang tải dữ liệu cây từ Firestore...");
         
+        // Reset lại mỗi lần fetch để tránh trùng lặp
+        for (const key in PLANT_DATA) delete PLANT_DATA[key];
+
         const querySnapshot = await getDocs(collection(db, "game_data"));
 
         if (querySnapshot.empty) {
-            console.log("⚠️ Server chưa có dữ liệu 'game_data', dùng mặc định.");
+            console.log("⚠️ Server chưa có dữ liệu 'game_data'.");
             return false;
         }
 
@@ -56,26 +23,49 @@ export async function fetchPlantsFromServer() {
             const data = doc.data();
             const id = data.id;
 
+            // 1. XỬ LÝ DỮ LIỆU CÂY TRỒNG (PLANTS)
+            // Nếu type là 'plants' hoặc không có type (dữ liệu cũ mặc định là cây)
             if (!data.type || data.type === 'plants') {
                 PLANT_DATA[id] = {
                     name: data.name || "Unknown",
+                    type: 'plants', // Đánh dấu loại
                     cost: Number(data.price) || 100, 
+                    
+                    // [QUAN TRỌNG] Lấy thêm trường hành vi (behavior) từ Admin
+                    // Mặc định là 'shooter' nếu chưa cài đặt
+                    behavior: data.behavior || "shooter", 
+                    
                     assets: {
                         card: data.cardImage || `assets/card/${id}.png`,
                         plant: data.plantImage || `assets/plant/${id}.png`,
                         bullet: data.bulletImage || `assets/pea/Pea.png`,
-                        skin: null
                     },
                     stats: {
                         damage: Number(data.damage) || 20,
                         speed: Number(data.speed) || 1.5,
-                        range: "line"
+                        hp: Number(data.hp) || 100
+                    }
+                };
+            }
+            // 2. XỬ LÝ DỮ LIỆU ZOMBIE
+            // Lưu cả zombie vào đây để GameCore/Zombie.js có thể tra cứu chỉ số
+            else if (data.type === 'zombies') {
+                PLANT_DATA[id] = {
+                    name: data.name || "Zombie",
+                    type: 'zombies', // Đánh dấu loại
+                    assets: {
+                        plant: data.plantImage || `assets/zombie/${id}.png` // Zombie dùng ảnh 'plant' làm sprite chính
+                    },
+                    stats: {
+                        damage: Number(data.damage) || 1,
+                        speed: Number(data.speed) || 0.2, // Tốc độ chạy
+                        hp: Number(data.hp) || 100
                     }
                 };
             }
         });
 
-        console.log("✅ Đã đồng bộ dữ liệu Cây thành công:", PLANT_DATA);
+        console.log("✅ Đã đồng bộ dữ liệu hoàn tất:", PLANT_DATA);
         return true;
 
     } catch (error) {

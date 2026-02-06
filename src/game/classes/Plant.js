@@ -1,36 +1,35 @@
 // file: src/game/classes/Plant.js
-import { 
-    CELL_WIDTH, CELL_HEIGHT, 
-    PLANT_SUN_MIN_SEC, PLANT_SUN_MAX_SEC 
-} from '../constants.js';
+import { CELL_WIDTH, CELL_HEIGHT, PLANT_SUN_MIN_SEC, PLANT_SUN_MAX_SEC } from '../constants.js';
 import { images, customImages, drawSprite } from '../Resources.js'; 
 import { PLANT_DATA } from '../../plantsData.js'; 
 
 export class Plant {
-    // [CẬP NHẬT] Constructor nhận thêm plantInfo từ GameCore để tối ưu
     constructor(x, y, type, plantInfo = null) {
         this.x = x;
         this.y = y;
         this.width = CELL_WIDTH;
         this.height = CELL_HEIGHT;
         
-        // 1. Lấy thông số (Ưu tiên từ tham số truyền vào, nếu không có mới tìm trong PLANT_DATA)
+        // 1. Lấy thông số (Ưu tiên từ tham số truyền vào)
         const info = plantInfo || PLANT_DATA[type] || {}; 
         const stats = info.stats || { damage: 0, speed: 2, health: 100 }; 
         
         this.type = type; 
-        
+        // [QUAN TRỌNG] Lấy hành vi từ Admin (Mặc định là shooter)
+        this.behavior = info.behavior || "shooter"; 
+
         // 2. Thiết lập Máu (Health)
-        // [FIX] Sửa 'blocker' thành 'wallnut' để khớp với ID trong database
-        this.maxHealth = stats.health || (type === 'wallnut' ? 4000 : 100);
+        this.maxHealth = stats.hp || (type === 'wallnut' ? 4000 : 100);
         this.health = this.maxHealth;
         
         this.damage = stats.damage || 0; 
         
-        // 3. Tốc độ bắn
-        this.shootInterval = (stats.speed || 2) * 60;
+        // 3. Tốc độ hồi chiêu (Frames)
+        // [FIX] Nếu speed = 0 thì không bao giờ kích hoạt
+        this.shootInterval = (stats.speed > 0 ? stats.speed : 999) * 60;
         this.timer = 0; 
         
+        // Trạng thái
         this.isReadyToShoot = false;       
         this.isReadyToProduceSun = false;
         this.isReadyToExplode = false; 
@@ -39,9 +38,15 @@ export class Plant {
         this.isGold = false;
 
         this.mySuns = []; 
-        // Logic cho Sunflower
-        if (this.type === 'sunflower' || this.type === 'sunflower_twin') {
+        
+        // Cấu hình riêng theo behavior
+        if (this.behavior === 'producer') {
             this.shootInterval = this.getRandomSunTime();
+            this.timer = Math.floor(Math.random() * 100); // Random offset lần đầu
+        } else if (this.behavior === 'mine') {
+            this.isArmed = false;
+            this.armTimer = 0;
+            this.armDuration = 200; // ~3.3s để kích hoạt
         }
 
         // Trạng thái Plant Food
@@ -67,58 +72,65 @@ export class Plant {
         this.isPowered = true;
         this.powerTimer = 0;
 
-        if (this.type === 'sunflower') {
-            this.powerDuration = 60; // 1 giây phun nắng
+        if (this.behavior === 'producer') {
+            this.powerDuration = 60; // 1 giây phun nắng liên tục
         } 
-        else if (this.damage > 0) { 
+        else if (['shooter', 'lobbed', 'slow'].includes(this.behavior)) { 
             this.powerDuration = 180; // 3 giây bắn siêu tốc
             this.shootInterval = 5;   // Tốc độ máy khâu
         }
-        else if (this.type === 'wallnut') {
-            // [LOGIC TIẾN HÓA WALL-NUT]
+        else if (this.behavior === 'wall' || this.type === 'wallnut') {
             this.isGold = true;       
             this.maxHealth = 8000;    
             this.health = 8000;       
             this.powerDuration = 60;  
         }
+        else if (this.behavior === 'mine') {
+            this.isArmed = true; // Kích hoạt ngay lập tức
+            this.powerDuration = 60;
+        }
     }
 
     draw(ctx) {
-        // 1. Ưu tiên ảnh động từ Admin (customImages)
+        // 1. Ưu tiên ảnh động từ Admin
         let currentImg = customImages[this.type];
 
-        // 2. Fallback: Nếu không có ảnh động thì dùng ảnh tĩnh mặc định
+        // 2. Fallback ảnh tĩnh
         if (!currentImg) {
-            if (this.type === 'peashooter') currentImg = images.shooter; // [FIX] ID là peashooter
-            else if (this.type === 'sunflower') currentImg = images.sunflower;
-            else if (this.type === 'cherrybomb') currentImg = images.cherrybomb;
-            else if (this.type === 'wallnut') currentImg = images.blocker; // [FIX] ID là wallnut
+            if (this.type.includes('peashooter')) currentImg = images.shooter;
+            else if (this.type.includes('sunflower')) currentImg = images.sunflower;
+            else if (this.type.includes('cherrybomb')) currentImg = images.cherrybomb;
+            else if (this.type.includes('wallnut')) currentImg = images.blocker;
             else if (this.type === 'wallnut_gold') currentImg = images.blocker_gold;
+            else currentImg = images.shooter; // Mặc định
         }
 
         // Logic Wall-nut Vàng
-        if (this.type === 'wallnut' && this.isGold) {
-            if (images.blocker_gold && images.blocker_gold.complete) {
-                currentImg = images.blocker_gold;
-            }
+        if (this.isGold && images.blocker_gold && images.blocker_gold.complete) {
+            currentImg = images.blocker_gold;
         }
         
-        // Hiệu ứng phát sáng
+        // Hiệu ứng phát sáng khi dùng Plant Food
         if (this.isPowered) {
             ctx.save();
             ctx.shadowBlur = 20;
             ctx.shadowColor = "#00ff00"; 
         }
 
-        // Vẽ cây
-        drawSprite(ctx, currentImg, this.x, this.y, this.width, this.height);
-
-        if (this.isPowered) {
+        // Logic mờ cho Mìn chưa kích hoạt
+        if (this.behavior === 'mine' && !this.isArmed) {
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            drawSprite(ctx, currentImg, this.x, this.y, this.width, this.height);
             ctx.restore();
+        } else {
+            drawSprite(ctx, currentImg, this.x, this.y, this.width, this.height);
         }
 
-        // Vẽ thanh máu (Trừ Cherry Bomb)
-        if (this.health < this.maxHealth && this.type !== 'cherrybomb') {
+        if (this.isPowered) ctx.restore();
+
+        // Vẽ thanh máu (Trừ cây nổ ngay)
+        if (this.health < this.maxHealth && this.behavior !== 'instant_kill' && this.behavior !== 'squash') {
             ctx.fillStyle = '#333';
             ctx.fillRect(this.x + 15, this.y, this.width - 30, 5);
             
@@ -134,7 +146,7 @@ export class Plant {
         if (this.isPowered) {
             this.powerTimer++;
 
-            if (this.type === 'sunflower') {
+            if (this.behavior === 'producer') {
                 if (this.powerTimer % 10 === 0 && this.powerTimer < 60) {
                     this.isReadyToProduceSun = true; 
                 }
@@ -142,45 +154,70 @@ export class Plant {
 
             if (this.powerTimer >= this.powerDuration) {
                 this.isPowered = false;
-                if (this.damage > 0) {
+                if (['shooter', 'lobbed', 'slow'].includes(this.behavior)) {
                     this.shootInterval = this.originalShootInterval;
                 }
             }
         }
 
-        // LOGIC CHÍNH
-        if (this.type === 'sunflower') {
-            this.mySuns = this.mySuns.filter(s => !s.delete && !s.collected);
+        // LOGIC CHÍNH THEO HÀNH VI
+        this.timer++;
 
-            if (this.mySuns.length < 2 || this.isPowered) {
-                this.timer++;
+        switch (this.behavior) {
+            case 'producer': // Sunflower
+                this.mySuns = this.mySuns.filter(s => !s.delete && !s.collected);
+                // Giới hạn số lượng sun trên sân để không spam quá nhiều
+                if (this.mySuns.length < 2 || this.isPowered) {
+                    if (this.timer >= this.shootInterval) {
+                        this.isReadyToProduceSun = true;
+                        if (!this.isPowered) {
+                            this.timer = 0; 
+                            this.shootInterval = this.getRandomSunTime(); 
+                        } else {
+                            this.timer = 0;
+                        }
+                    }
+                } else {
+                    this.timer = 0; // Đợi nhặt sun xong mới đếm tiếp
+                }
+                break;
+
+            case 'shooter':      // Bắn thẳng
+            case 'lobbed':       // Bắn cong
+            case 'slow':         // Bắn chậm
+                // Logic timer đơn giản, việc kiểm tra có zombie hay không để bắn sẽ nằm ở GameCore
                 if (this.timer >= this.shootInterval) {
-                    this.isReadyToProduceSun = true;
-                    if (!this.isPowered) {
-                        this.timer = 0; 
-                        this.shootInterval = this.getRandomSunTime(); 
-                    } else {
-                        this.timer = 0;
+                    this.isReadyToShoot = true;
+                    // Timer sẽ được reset ở GameCore khi đạn thực sự được bắn
+                }
+                break;
+
+            case 'mine':         // Mìn
+                if (!this.isArmed) {
+                    // Đếm ngược để kích hoạt
+                    if (this.timer >= this.armDuration) {
+                        this.isArmed = true; 
                     }
                 }
-            } else {
-                this.timer = 0;
-            }
-        } 
-        else if (this.shootInterval > 0) {
-            this.timer++;
-            if (this.timer >= this.shootInterval) {
-                if (this.damage > 0) {
-                    this.isReadyToShoot = true;
-                }
-                else if (this.type === 'cherrybomb' || this.type === 'jalapeno') {
+                // Nếu đã armed, chờ va chạm zombie ở GameCore
+                break;
+
+            case 'instant_kill': // Cherry Bomb
+            case 'squash':       // Squash
+                if (this.timer >= 60) { // Đợi 1s animation
                     this.isReadyToExplode = true;
                 }
-                
-                if (this.type !== 'cherrybomb' && this.type !== 'jalapeno') {
-                    this.timer = 0;
+                break;
+
+            case 'wall':         // Wall-nut
+                // Không làm gì cả
+                break;
+
+            default: // Mặc định Shooter
+                if (this.timer >= this.shootInterval) {
+                    this.isReadyToShoot = true;
                 }
-            }
+                break;
         }
     }
 }

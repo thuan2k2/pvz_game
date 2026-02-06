@@ -1,5 +1,4 @@
 // file: src/admin/dashboard.js
-// Import cấu hình Firebase (Đi ra 1 cấp thư mục để tìm firebase/config.js)
 import { db, auth, storage } from '../firebase/config.js'; 
 import { collection, getDocs, doc, updateDoc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -29,7 +28,6 @@ onAuthStateChanged(auth, async (user) => {
     if (userSnap.exists() && userSnap.data().role === 'admin') {
         console.log("Welcome Admin: " + user.email);
         loadUserList(); 
-        // Load danh sách cây mặc định khi vào trang
         if(window.filterGameData) window.filterGameData('plants'); 
     } else {
         if(window.location.pathname.includes('admin')) {
@@ -90,7 +88,7 @@ window.editCoin = async (userId, currentCoin) => {
 };
 
 
-// --- PHẦN 2: QUẢN LÝ CÂY TRỒNG & ZOMBIE (CẢI TIẾN) ---
+// --- PHẦN 2: QUẢN LÝ CÂY TRỒNG & ZOMBIE ---
 
 // A. Các hàm hỗ trợ UI
 
@@ -99,46 +97,46 @@ window.handleTypeChange = () => {
     const type = document.getElementById('gd_type').value;
     const plantGroup = document.getElementById('group-plant-stats'); // Nhóm giá tiền
     const bulletGroup = document.getElementById('group-bullet');     // Nhóm ảnh đạn
+    const behaviorGroup = document.getElementById('group-behavior'); // Nhóm hành vi
     
     if (type === 'zombies') {
-        // Zombie: Ẩn giá tiền và ảnh đạn
+        // Zombie: Ẩn giá tiền, ảnh đạn và hành vi (Zombie chưa cần behavior phức tạp)
         if(plantGroup) plantGroup.style.display = 'none';
         if(bulletGroup) bulletGroup.style.display = 'none';
+        if(behaviorGroup) behaviorGroup.style.display = 'none';
         
-        // Reset giá tiền về 0 để tránh lỗi dữ liệu
+        // Reset giá tiền về 0
         const costInput = document.getElementById('gd_cost');
         if(costInput) costInput.value = 0;
     } else {
         // Plant: Hiện đầy đủ
         if(plantGroup) plantGroup.style.display = 'block';
         if(bulletGroup) bulletGroup.style.display = 'block';
+        if(behaviorGroup) behaviorGroup.style.display = 'block';
     }
 };
 
-// 2. Mở Modal Thêm Mới (Reset form sạch sẽ)
+// 2. Mở Modal Thêm Mới
 window.openAddModal = () => {
     const form = document.getElementById('form-game-data');
     if(form) form.reset();
     
     document.getElementById('modal-title').innerText = "Thêm Dữ Liệu Mới";
     const idInput = document.getElementById('gd_id');
-    if(idInput) idInput.disabled = false; // Cho phép nhập ID mới
+    if(idInput) idInput.disabled = false; 
     
-    // Reset ảnh preview về rỗng
+    // Reset ảnh
     document.querySelectorAll('.img-preview-box img').forEach(img => img.src = "");
-    
-    // Reset các input ẩn chứa link ảnh cũ
     if(document.getElementById('url_card_hidden')) document.getElementById('url_card_hidden').value = "";
     if(document.getElementById('url_plant_hidden')) document.getElementById('url_plant_hidden').value = "";
     if(document.getElementById('url_bullet_hidden')) document.getElementById('url_bullet_hidden').value = "";
 
     document.getElementById('modal-game-data').classList.remove('hidden');
     
-    // Gọi hàm này để ẩn/hiện các trường đúng theo mặc định (Plants)
     if(window.handleTypeChange) window.handleTypeChange();
 };
 
-// 3. [FIX] Mở Modal Sửa (Đổ dữ liệu cũ vào form)
+// 3. [CẬP NHẬT] Mở Modal Sửa (Đổ dữ liệu cũ vào form)
 window.editGameData = async (id) => {
     try {
         const docSnap = await getDoc(doc(db, "game_data", id));
@@ -146,13 +144,18 @@ window.editGameData = async (id) => {
         
         const data = docSnap.data();
         
-        // Đổ dữ liệu vào các ô input
+        // Đổ dữ liệu cơ bản
         document.getElementById('gd_type').value = data.type || 'plants';
         document.getElementById('gd_id').value = data.id;
-        document.getElementById('gd_id').disabled = true; // Không cho sửa ID (khóa cứng)
+        document.getElementById('gd_id').disabled = true; 
         document.getElementById('gd_name').value = data.name;
         
-        // Lấy dữ liệu phẳng hoặc từ object stats (để tương thích ngược)
+        // [MỚI] Đổ dữ liệu hành vi
+        if(document.getElementById('gd_behavior')) {
+            document.getElementById('gd_behavior').value = data.behavior || 'shooter';
+        }
+        
+        // Đổ chỉ số
         const price = data.price !== undefined ? data.price : (data.cost || 0);
         const damage = data.damage !== undefined ? data.damage : (data.stats?.damage || 0);
         const speed = data.speed !== undefined ? data.speed : (data.stats?.speed || 0);
@@ -163,7 +166,7 @@ window.editGameData = async (id) => {
         document.getElementById('gd_speed').value = speed;
         document.getElementById('gd_hp').value = hp;
 
-        // Xử lý ảnh: Đổ link cũ vào hidden input và hiện preview
+        // Đổ ảnh
         const cardImg = data.cardImage || data.assets?.card || "";
         const plantImg = data.plantImage || data.assets?.plant || "";
         const bulletImg = data.bulletImage || data.assets?.bullet || "";
@@ -179,7 +182,6 @@ window.editGameData = async (id) => {
         document.getElementById('modal-title').innerText = "Sửa: " + data.name;
         document.getElementById('modal-game-data').classList.remove('hidden');
         
-        // Cập nhật giao diện theo loại (Plant/Zombie)
         window.handleTypeChange();
 
     } catch (error) {
@@ -188,14 +190,13 @@ window.editGameData = async (id) => {
     }
 };
 
-// 4. [FIX] Xóa Dữ Liệu
+// 4. Xóa Dữ Liệu
 window.deleteGameData = async (id) => {
     if(!confirm(`Bạn chắc chắn muốn xóa ${id}? Hành động này không thể hoàn tác!`)) return;
     try {
         await deleteDoc(doc(db, "game_data", id));
         alert("🗑️ Đã xóa thành công!");
         
-        // Reload lại tab đang mở (Plants hoặc Zombies)
         const activeBtn = document.querySelector('.tab-btn.active');
         const currentType = activeBtn && activeBtn.innerText.includes('Zombie') ? 'zombies' : 'plants';
         window.filterGameData(currentType);
@@ -207,7 +208,7 @@ window.deleteGameData = async (id) => {
 // B. Xử lý Upload và Lưu Form
 
 async function uploadImageToStorage(file, folderName, fileName) {
-    if (!file) return null; // Trả về null nếu không có file mới
+    if (!file) return null; 
     const storageRef = sRef(storage, `assets/${folderName}/${fileName}`);
     await uploadBytes(storageRef, file); 
     return await getDownloadURL(storageRef); 
@@ -232,7 +233,7 @@ if (gameDataForm) {
             
             if (!id || !name) throw new Error("Vui lòng nhập ID và Tên!");
 
-            // 1. Upload ảnh (Chạy song song để nhanh hơn)
+            // 1. Upload ảnh
             const fileCard = document.getElementById('file_card').files[0];
             const filePlant = document.getElementById('file_plant').files[0];
             const fileBullet = document.getElementById('file_bullet').files[0];
@@ -243,25 +244,29 @@ if (gameDataForm) {
                 uploadImageToStorage(fileBullet, 'pea', `${id}_bullet.png`)
             ]);
 
-            // Logic chọn ảnh: Ưu tiên ảnh mới -> nếu không có thì lấy ảnh cũ (hidden) -> rỗng
             const finalCard = newUrlCard || document.getElementById('url_card_hidden').value || "";
             const finalPlant = newUrlPlant || document.getElementById('url_plant_hidden').value || "";
             const finalBullet = newUrlBullet || document.getElementById('url_bullet_hidden').value || "";
 
-            // Lấy các chỉ số
+            // Lấy chỉ số
             const valPrice = parseInt(document.getElementById('gd_cost').value) || 0;
             const valDamage = parseInt(document.getElementById('gd_damage').value) || 0;
             const valSpeed = parseFloat(document.getElementById('gd_speed').value) || 0;
             const valHp = parseInt(document.getElementById('gd_hp').value) || 100;
+            
+            // [MỚI] Lấy hành vi
+            const valBehavior = document.getElementById('gd_behavior') ? document.getElementById('gd_behavior').value : 'shooter';
 
             // 2. Chuẩn bị Object dữ liệu
-            // [QUAN TRỌNG] Lưu cả cấu trúc phẳng (cho Shop) và lồng nhau (cho Game)
             const newData = {
                 id: id,
                 name: name,
                 type: type,
                 
-                // Dữ liệu phẳng (Dùng cho Admin Table, Shop hiển thị)
+                // [MỚI] Lưu hành vi vào DB
+                behavior: valBehavior,
+
+                // Dữ liệu phẳng
                 price: valPrice, 
                 damage: valDamage,
                 speed: valSpeed,
@@ -272,7 +277,7 @@ if (gameDataForm) {
                 plantImage: finalPlant,
                 bulletImage: finalBullet,
                 
-                // Dữ liệu lồng nhau (Dùng cho GameCore - Plant.js / Zombie.js)
+                // Dữ liệu lồng nhau (cho GameCore cũ nếu cần)
                 stats: {
                     damage: valDamage,
                     speed: valSpeed,
@@ -285,13 +290,12 @@ if (gameDataForm) {
                 }
             };
 
-            // 3. Lưu vào Firestore (Dùng setDoc với merge: true để cập nhật hoặc tạo mới)
+            // 3. Lưu vào Firestore
             await setDoc(doc(db, "game_data", id), newData, { merge: true });
 
             alert(`✅ Đã lưu thành công ${name}!`);
             document.getElementById('modal-game-data').classList.add('hidden');
             
-            // Reload lại bảng danh sách
             if(window.filterGameData) window.filterGameData(type);
 
         } catch (error) {
@@ -306,12 +310,11 @@ if (gameDataForm) {
     });
 }
 
-// C. Tải danh sách Cây/Zombie ra bảng
+// C. Tải danh sách
 window.filterGameData = async (type) => {
     const listBody = document.getElementById('game-data-list');
     if(!listBody) return;
     
-    // Update style cho nút tab
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => {
@@ -327,17 +330,20 @@ window.filterGameData = async (type) => {
 
         querySnapshot.forEach((doc) => {
             const item = doc.data();
-            // Nếu dữ liệu cũ không có type, mặc định là plants
             const itemType = item.type || 'plants'; 
 
             if (itemType === type) {
                 hasData = true;
                 const imgUrl = item.cardImage || item.plantImage || "https://via.placeholder.com/50";
                 
-                // Hiển thị thông minh: Zombie thì không hiện giá
                 const priceDisplay = type === 'plants' ? `${item.price || item.cost || 0} ☀️` : '-';
                 const damageDisplay = item.damage || (item.stats ? item.stats.damage : 0);
                 const speedDisplay = item.speed || (item.stats ? item.stats.speed : 0);
+                
+                // Hiển thị hành vi nếu là Plants
+                const behaviorDisplay = type === 'plants' ? 
+                    `<span style="background:#eef; padding:3px 6px; border-radius:4px; font-size:0.9em; color:#2980b9;">${item.behavior || 'Shooter'}</span>` 
+                    : '<span style="color:#7f8c8d;">Zombie</span>';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -346,7 +352,8 @@ window.filterGameData = async (type) => {
                     <td>${item.name}</td>
                     <td>${priceDisplay}</td>
                     <td>${damageDisplay}</td>
-                    <td>${speedDisplay}</td>
+                    <td>${speedDisplay}s</td>
+                    <td>${behaviorDisplay}</td>
                     <td>
                         <button class="btn btn-edit" onclick="editGameData('${item.id}')">Sửa</button>
                         <button class="btn btn-ban" onclick="deleteGameData('${item.id}')" style="background:#c0392b;">Xóa</button>

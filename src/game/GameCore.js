@@ -1,3 +1,4 @@
+// file: src/game/GameCore.js
 import { 
     CELL_WIDTH, CELL_HEIGHT, TOP_OFFSET, GAME_WIDTH, GAME_HEIGHT, 
     INITIAL_SUN, WAVE_CONFIG, 
@@ -14,7 +15,6 @@ import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
 import { callEndGameReward, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
-// [QUAN TRỌNG] Import dữ liệu
 import { PLANT_DATA } from '../plantsData.js'; 
 
 export default class GameCore {
@@ -39,7 +39,6 @@ export default class GameCore {
         
         this.mouse = { x: undefined, y: undefined, width: 0.1, height: 0.1 };
         
-        // Mặc định null, sẽ set sau khi render shop
         this.selectedTool = 'plant';
         this.selectedPlantType = null; 
 
@@ -76,21 +75,18 @@ export default class GameCore {
         this.canvas.addEventListener('mousemove', this.handleMouseMove);
         this.canvas.addEventListener('click', this.handleMouseClick);
         
-        // Xử lý chọn cây (Event Delegation)
         document.body.addEventListener('click', (e) => {
             const card = e.target.closest('.plant-card'); 
             if (card) {
-                // Xóa active cũ
                 document.querySelectorAll('.plant-card').forEach(c => {
                     c.classList.remove('selected');
-                    c.style.borderColor = 'transparent'; // Reset viền
+                    c.style.borderColor = 'transparent'; 
                 });
                 document.getElementById('shovel-tool').classList.remove('selected');
                 document.getElementById('plant-food-tool').classList.remove('selected');
                 
-                // Active mới
                 card.classList.add('selected');
-                card.style.borderColor = 'gold'; // Highlight màu vàng
+                card.style.borderColor = 'gold'; 
                 this.selectedTool = 'plant';
                 
                 const type = card.getAttribute('data-type');
@@ -164,7 +160,6 @@ export default class GameCore {
         this.score = 0;
         this.sun = INITIAL_SUN;
 
-        // Check Sun Pack
         const inventory = JSON.parse(localStorage.getItem('user_inventory') || '[]');
         const tempItems = JSON.parse(localStorage.getItem('user_temp_items') || '{}');
         const settings = JSON.parse(localStorage.getItem('user_item_settings') || '{}');
@@ -203,71 +198,60 @@ export default class GameCore {
         document.getElementById('bottom-toolbar').classList.remove('hidden');
         document.getElementById('btn-pause-game').classList.remove('hidden');
         
-        // [FIX UI] Render lại shop bar
         this.renderPlantShopBar();
 
         this.animate();
     }
 
-    // [FIX LỖI UI DÍNH CHÙM] - Thêm CSS trực tiếp vào JS
     renderPlantShopBar() {
         const container = document.getElementById('plant-shop-bar'); 
         if (!container) return;
         
         container.innerHTML = ''; 
         
-        // 1. [QUAN TRỌNG] Áp dụng Style Flexbox để nằm ngang và có khoảng cách
         container.style.display = 'flex';
         container.style.flexDirection = 'row';
         container.style.gap = '10px';
         container.style.padding = '5px';
-        container.style.overflowX = 'auto'; // Cho phép cuộn ngang nếu quá nhiều cây
+        container.style.overflowX = 'auto'; 
         container.style.alignItems = 'center';
         
-        // 2. Lọc chỉ lấy Cây (type = plants) và có giá tiền
-        // Loại bỏ các item không phải cây (như zombie hoặc item rác)
         const plantsArray = Object.entries(PLANT_DATA).filter(([id, data]) => {
             return (data.type === 'plants' || !data.type) && data.cost !== undefined;
         });
 
-        // 3. Sắp xếp giá tăng dần
         plantsArray.sort((a, b) => a[1].cost - b[1].cost);
 
         if (plantsArray.length === 0) {
             console.warn("⚠️ Không tìm thấy cây nào trong PLANT_DATA!");
         }
 
-        // 4. Render thẻ bài
         plantsArray.forEach(([id, plant], index) => {
             const card = document.createElement('div');
             card.className = 'plant-card';
             card.setAttribute('data-type', id);
             
-            // [QUAN TRỌNG] CSS cho từng thẻ bài để không bị co rúm
             card.style.position = 'relative';
-            card.style.width = '70px';  // Chiều rộng cố định
-            card.style.height = '90px'; // Chiều cao cố định
+            card.style.width = '70px'; 
+            card.style.height = '90px'; 
             card.style.border = '2px solid transparent';
             card.style.borderRadius = '5px';
             card.style.cursor = 'pointer';
             card.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            card.style.flexShrink = '0'; // Ngăn không cho thẻ bị co lại khi hết chỗ
+            card.style.flexShrink = '0'; 
             card.style.display = 'flex';
             card.style.flexDirection = 'column';
             card.style.alignItems = 'center';
             card.style.justifyContent = 'center';
 
-            // Auto-select cây đầu tiên
             if (index === 0) {
                 card.classList.add('selected');
                 card.style.borderColor = 'gold';
                 this.selectedPlantType = id;
             }
 
-            // Xử lý link ảnh
             let imgSrc = plant.assets.card;
             if(imgSrc && !imgSrc.startsWith('http') && !imgSrc.includes('assets/')) imgSrc = `/assets/card/${imgSrc}`;
-            // Fallback ảnh nếu lỗi
             const fallbackSrc = 'assets/card/Peashooter.png';
 
             card.innerHTML = `
@@ -398,7 +382,6 @@ export default class GameCore {
         const gridPositionX = GRID_START_X + (col * CELL_WIDTH);
         const gridPositionY = TOP_OFFSET + (row * CELL_HEIGHT);
 
-        // Power UP
         if (this.selectedTool === 'plant_food') {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
@@ -415,7 +398,6 @@ export default class GameCore {
             return;
         }
 
-        // Shovel
         if (this.selectedTool === 'shovel') {
             for (let i = 0; i < this.plants.length; i++) {
                 if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) {
@@ -430,11 +412,10 @@ export default class GameCore {
             if (this.plants[i].x === gridPositionX && this.plants[i].y === gridPositionY) return; 
         }
 
-        // TRỒNG CÂY
         if (!this.selectedPlantType) return;
         const plantInfo = PLANT_DATA[this.selectedPlantType];
         
-        if (plantInfo) {
+        if (plantInfo && (plantInfo.type === 'plants' || !plantInfo.type)) {
             if (this.sun >= plantInfo.cost) {
                 this.plants.push(new Plant(gridPositionX, gridPositionY, this.selectedPlantType, plantInfo));
                 this.sun -= plantInfo.cost;
@@ -453,9 +434,15 @@ export default class GameCore {
             
             for (let j = 0; j < this.plants.length; j++) {
                 const p = this.plants[j];
+                // Thêm logic va chạm cho cây nổ hoặc mìn (behavior: mine, instant_kill)
                 if (z.y === p.y && collision(z, p)) { 
                     z.movement = 0; 
                     p.health -= z.damage; 
+                    
+                    // Nếu là mìn đã kích hoạt -> Nổ ngay khi chạm zombie
+                    if (p.behavior === 'mine' && p.isArmed) {
+                        p.isReadyToExplode = true;
+                    }
                 }
             }
             
@@ -496,14 +483,19 @@ export default class GameCore {
             plant.draw(this.ctx); 
             plant.update();
             
+            // Xử lý chết (hết máu)
             if (plant.health <= 0) { 
                 this.plants.splice(i, 1); 
                 i--; continue; 
             }
+            
+            // Xử lý nổ (Mìn, Cherry Bomb, Squash)
             if (plant.isReadyToExplode) { 
                 this.triggerExplosion(plant); 
-                plant.health = 0; continue; 
+                plant.health = 0; continue; // Cây chết sau khi nổ
             }
+            
+            // Xử lý sinh nắng (Sunflower)
             if (plant.isReadyToProduceSun) { 
                 const newSun = new Sun(plant.x, plant.y + 10, plant.y + 10, false);
                 this.suns.push(newSun);
@@ -511,12 +503,31 @@ export default class GameCore {
                 plant.isReadyToProduceSun = false; 
             }
             
+            // Xử lý bắn đạn (Shooter, Lobbed, Slow)
             const GRID_RIGHT_EDGE = GRID_START_X + (GRID_COLS * CELL_WIDTH);
-            const zombieInRowAndRange = this.zombies.some(z => z.y === plant.y && z.x < GRID_RIGHT_EDGE + 20 && z.x > plant.x);
+            const zombieInRowAndRange = this.zombies.some(z => 
+                z.y === plant.y && 
+                z.x < GRID_RIGHT_EDGE + 20 && 
+                z.x > plant.x
+            );
 
+            // Điều kiện bắn: Phải sẵn sàng và có zombie trong tầm (cùng hàng)
             if (plant.isReadyToShoot && zombieInRowAndRange) { 
-                this.projectiles.push(new Projectile(plant.x + 70, plant.y + 35, plant.type, plant.damage)); 
+                // Xác định loại đạn dựa trên hành vi
+                let projectileType = 'normal';
+                if (plant.behavior === 'lobbed') projectileType = 'lobbed'; // Cong
+                else if (plant.behavior === 'slow') projectileType = 'snow_pea'; // Băng
+
+                this.projectiles.push(new Projectile(
+                    plant.x + 70, 
+                    plant.y + 35, 
+                    plant.type, // ID để lấy ảnh đạn
+                    plant.damage,
+                    projectileType // Kiểu bay
+                )); 
+                
                 plant.isReadyToShoot = false; 
+                plant.timer = 0; // Reset timer bắn
             }
         }
     }
@@ -538,9 +549,26 @@ export default class GameCore {
     }
 
     triggerExplosion(bombPlant) {
-        const explosionRect = { x: bombPlant.x - CELL_WIDTH, y: bombPlant.y - CELL_HEIGHT, width: CELL_WIDTH * 3, height: CELL_HEIGHT * 3 };
+        // [CẬP NHẬT] Phạm vi nổ tùy loại
+        let rangeX = 1; 
+        let rangeY = 1;
+
+        if (bombPlant.behavior === 'instant_kill') {
+            rangeX = 3; rangeY = 3; // Cherry Bomb nổ 3x3
+        } else if (bombPlant.behavior === 'mine' || bombPlant.behavior === 'squash') {
+            rangeX = 1; rangeY = 1; // Mìn chỉ nổ 1 ô
+        }
+
+        const explosionRect = { 
+            x: bombPlant.x - (rangeX > 1 ? CELL_WIDTH : 0), 
+            y: bombPlant.y - (rangeY > 1 ? CELL_HEIGHT : 0), 
+            width: CELL_WIDTH * rangeX, 
+            height: CELL_HEIGHT * rangeY 
+        };
+
         this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
         this.ctx.fillRect(explosionRect.x, explosionRect.y, explosionRect.width, explosionRect.height);
+        
         for (let i = 0; i < this.zombies.length; i++) {
             const z = this.zombies[i];
             if (collision(explosionRect, z)) { z.health -= bombPlant.damage; }
@@ -608,13 +636,10 @@ export default class GameCore {
             titleEl.innerText = "CHIẾN THẮNG!"; 
             titleEl.style.color = "#27ae60";
             rewardSection.classList.remove('hidden');
-            
             const data = await callEndGameReward(true);
-            
             if (data && data.success) {
                 rewardCoinEl.innerText = data.reward; 
                 console.log(data.message);
-
                 if (auth.currentUser) {
                     saveLog(
                         auth.currentUser.uid,
@@ -627,7 +652,6 @@ export default class GameCore {
             } else {
                 rewardCoinEl.innerText = "Lỗi kết nối!";
             }
-
         } else {
             titleEl.innerText = "GAME OVER!"; 
             titleEl.style.color = "#c0392b";
