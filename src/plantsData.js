@@ -1,19 +1,17 @@
 // file: src/plantsData.js
-import { database } from './firebase/config.js';
-import { ref, child, get } from "firebase/database";
+import { db } from './firebase/config.js'; // [SỬA] Dùng db (Firestore) thay vì database
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// [CẬP NHẬT] Thêm 'export' để các file khác import được
+// [GIỮ NGUYÊN] Cấu trúc dữ liệu cũ để game không bị lỗi khi chưa load mạng
 export const PLANT_DATA = {
-    // --- DỮ LIỆU CŨ (Mặc định khi chưa tải xong từ mạng) ---
     "peashooter": {
         name: "Peashooter",
         cost: 100,
-        // Lưu ý: Dữ liệu cũ dùng tên file, dữ liệu mới từ Admin sẽ là Link Full (https://...)
         assets: {
-            card: "Peashooter.png",          
-            plant: "Peashooter.png",         
-            bullet: "Pea.png",               
-            skin: "Peashooter Goal.png"      
+            card: "assets/card/Peashooter.png",      
+            plant: "assets/plant/Peashooter.png",     
+            bullet: "assets/pea/Pea.png",            
+            skin: "assets/skin/Peashooter Goal.png"   
         },
         stats: { damage: 20, speed: 1.5, range: "line" }
     },
@@ -22,10 +20,10 @@ export const PLANT_DATA = {
         name: "Cabbage Pult",
         cost: 100,
         assets: {
-            card: "Cabbage-pult.png",        
-            plant: "Cabbage-pult.png",       
-            bullet: "Cabbage.png",           
-            skin: null                       
+            card: "assets/card/Cabbage-pult.png",     
+            plant: "assets/plant/Cabbage-pult.png",    
+            bullet: "assets/pea/Cabbage.png",        
+            skin: null                    
         },
         stats: { damage: 40, speed: 2.0, range: "lob" } 
     },
@@ -34,37 +32,63 @@ export const PLANT_DATA = {
         name: "Melon Pult",
         cost: 300,
         assets: {
-            card: "Melon-pult.png",          
-            plant: "Melon-pult.png",         
-            bullet: "Melon.png",             
-            skin: "Winter Melon.png"         
+            card: "assets/card/Melon-pult.png",       
+            plant: "assets/plant/Melon-pult.png",      
+            bullet: "assets/pea/Melon.png",          
+            skin: "assets/skin/Winter Melon.png"      
         },
         stats: { damage: 80, speed: 2.5, range: "lob" }
     }
 };
 
-// [MỚI] Hàm tải dữ liệu từ Firebase Realtime Database
+// [SỬA] Hàm tải dữ liệu từ Firestore (Đồng bộ với Admin.js)
 export async function fetchPlantsFromServer() {
-    const dbRef = ref(database);
     try {
-        console.log("📡 Đang tải dữ liệu cây từ Server...");
-        const snapshot = await get(child(dbRef, "game_data/plants"));
+        console.log("📡 Đang tải dữ liệu cây từ Firestore...");
         
-        if (snapshot.exists()) {
-            const serverData = snapshot.val();
-            
-            // Kỹ thuật quan trọng: Gộp dữ liệu mới vào biến PLANT_DATA cũ
-            // Lệnh này giúp cập nhật dữ liệu mà không làm mất tham chiếu của biến
-            Object.assign(PLANT_DATA, serverData);
-            
-            console.log("✅ Đã đồng bộ dữ liệu Cây thành công!", PLANT_DATA);
-            return true;
-        } else {
-            console.log("⚠️ Chưa có dữ liệu trên Server, dùng dữ liệu mặc định.");
+        // Gọi lên collection 'game_data' nơi Admin đã lưu
+        const querySnapshot = await getDocs(collection(db, "game_data"));
+
+        if (querySnapshot.empty) {
+            console.log("⚠️ Server chưa có dữ liệu 'game_data', dùng mặc định.");
             return false;
         }
+
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            const id = data.id; // VD: "peashooter"
+
+            // Chỉ xử lý nếu là plants
+            if (!data.type || data.type === 'plants') {
+                // [QUAN TRỌNG] Chuyển đổi dữ liệu phẳng từ Admin sang cấu trúc lồng nhau của Game
+                PLANT_DATA[id] = {
+                    name: data.name || "Unknown",
+                    // Admin lưu là 'price', Game dùng 'cost' -> Cần map lại
+                    cost: Number(data.price) || 100, 
+                    
+                    assets: {
+                        // Admin lưu đường dẫn full, Game gán vào đây
+                        card: data.cardImage || `assets/card/${id}.png`,
+                        plant: data.plantImage || `assets/plant/${id}.png`,
+                        bullet: data.bulletImage || `assets/pea/Pea.png`,
+                        skin: null
+                    },
+                    
+                    stats: {
+                        damage: Number(data.damage) || 20,
+                        speed: Number(data.speed) || 1.5,
+                        range: "line" // Mặc định là bắn thẳng, sau này có thể thêm option trong Admin
+                    }
+                };
+            }
+        });
+
+        console.log("✅ Đã đồng bộ dữ liệu Cây thành công:", PLANT_DATA);
+        return true;
+
     } catch (error) {
         console.error("❌ Lỗi tải dữ liệu cây:", error);
+        // Không return false để game vẫn tiếp tục chạy với dữ liệu mặc định
         return false;
     }
 }

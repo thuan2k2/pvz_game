@@ -1,6 +1,6 @@
 import { 
     CELL_WIDTH, CELL_HEIGHT, TOP_OFFSET, GAME_WIDTH, GAME_HEIGHT, 
-    INITIAL_SUN, SUN_SPAWN_RATE, WAVE_CONFIG, 
+    INITIAL_SUN, WAVE_CONFIG, 
     GRID_START_X, GRID_COLS, GRID_ROWS,
     SKY_SUN_MIN_SEC, SKY_SUN_MAX_SEC 
 } from './constants.js';
@@ -12,12 +12,12 @@ import { Projectile } from './classes/Projectile.js';
 import { Sun } from './classes/Sun.js';
 import { LawnMower } from './classes/LawnMower.js';
 import { images } from './Resources.js';
-import { callEndGameReward, getSystemConfig, saveLog, useGameItem } from '../firebase/auth.js';
+import { callEndGameReward, saveLog, useGameItem } from '../firebase/auth.js';
 import { auth } from '../firebase/config.js';
 // [MỚI] Import dữ liệu cây động
 import { PLANT_DATA } from '../plantsData.js'; 
 
-export class GameCore {
+export default class GameCore {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
@@ -92,8 +92,6 @@ export class GameCore {
                 this.selectedTool = 'plant';
                 
                 // Lấy ID cây (quan trọng: logic mới)
-                // Trong hàm renderPlantShop, bạn cần set attribute data-type cho thẻ cha
-                // Ví dụ: <div class="plant-card" data-type="peashooter" ...>
                 const type = card.getAttribute('data-type');
                 if(type) this.selectedPlantType = type;
             }
@@ -149,6 +147,8 @@ export class GameCore {
     getRandomDuration(min, max) { return Math.floor(Math.random() * (max - min + 1) + min) * 60; }
 
     start() {
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+
         this.createGrid();
         this.createLawnMowers();
         
@@ -220,7 +220,7 @@ export class GameCore {
 
     // [MỚI] Hàm vẽ thanh chọn cây động dựa trên PLANT_DATA
     renderPlantShopBar() {
-        const container = document.getElementById('plant-shop-bar'); // Bạn cần tạo thẻ này trong HTML nếu chưa có
+        const container = document.getElementById('plant-shop-bar'); 
         if (!container) return;
         
         container.innerHTML = ''; // Reset cũ
@@ -238,7 +238,7 @@ export class GameCore {
 
             // Ảnh Card (ưu tiên link online)
             let imgSrc = plant.assets.card;
-            if(!imgSrc.startsWith('http')) imgSrc = `/assets/card/${imgSrc}`;
+            if(!imgSrc.startsWith('http') && !imgSrc.startsWith('assets/')) imgSrc = `/assets/card/${imgSrc}`;
 
             card.innerHTML = `
                 <div class="card-cost">${plant.cost}</div>
@@ -416,7 +416,8 @@ export class GameCore {
         if (plantInfo) {
             // Kiểm tra đủ tiền không
             if (this.sun >= plantInfo.cost) {
-                this.plants.push(new Plant(gridPositionX, gridPositionY, this.selectedPlantType));
+                // Truyền cả ID và plantInfo vào class Plant
+                this.plants.push(new Plant(gridPositionX, gridPositionY, this.selectedPlantType, plantInfo));
                 this.sun -= plantInfo.cost;
             } else {
                 console.log("Không đủ sun!"); // Có thể thêm UI báo lỗi

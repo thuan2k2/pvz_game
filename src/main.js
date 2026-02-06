@@ -1,10 +1,12 @@
+// src/main.js
 import { monitorAuthState, logoutUser, listenToUserData } from './firebase/auth.js';
 import { auth, db } from './firebase/config.js'; 
-import { signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'; 
-import { GameCore } from './game/GameCore.js';
+import { signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { doc, onSnapshot, collection, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js'; 
+// Đảm bảo đường dẫn này đúng với cấu trúc thực tế
+import GameCore from './game/GameCore.js'; 
 import { loadImages } from './game/Resources.js';
-// [MỚI] Import hàm tải dữ liệu cây từ Server
+// [MỚI] Import hàm tải dữ liệu cây từ Server (Sẽ tạo ở bước sau)
 import { fetchPlantsFromServer } from './plantsData.js';
 
 const ui = {
@@ -28,6 +30,7 @@ const ui = {
 let unsubscribeUser = null;
 let unsubscribeSystem = null; 
 let maintenanceInterval = null; 
+let gameInstance = null; // Biến lưu instance game để tránh tạo trùng
 
 let currentState = {
     userRole: null, 
@@ -38,9 +41,14 @@ let currentState = {
 // --- 1. LOGIC AUTH & REALTIME UPDATE ---
 monitorAuthState(async (user) => {
     
-    // [MỚI] Tải dữ liệu Cây/Zombie từ Server trước khi vào game
-    // Việc này đảm bảo các cây mới thêm từ Admin sẽ hiển thị đúng
-    await fetchPlantsFromServer();
+    // [QUAN TRỌNG] Tải dữ liệu Cây/Zombie từ Server trước khi làm gì khác
+    // Việc này ngăn lỗi "undefined plant" khi vào game
+    try {
+        await fetchPlantsFromServer();
+        console.log("Dữ liệu cây đã tải xong.");
+    } catch (e) {
+        console.error("Lỗi tải dữ liệu cây:", e);
+    }
 
     // LẮNG NGHE THÔNG BÁO ĐẠI GIA (SERVER BROADCAST)
     const qBroadcast = query(collection(db, "server_broadcasts"), orderBy("timestamp", "desc"), limit(1));
@@ -139,24 +147,23 @@ monitorAuthState(async (user) => {
         }
     }
 
-    initGame();
+    // Khởi tạo sự kiện game (chỉ chạy 1 lần)
+    initGameEvents();
 });
 
 // [FIX] HÀM HIỂN THỊ HIỆU ỨNG ĐẠI GIA (SỬ DỤNG CSS KEYFRAMES)
 function showBigSpenderEffect(message) {
-    // 1. Xóa style và marquee cũ nếu đang chạy để tránh trùng lặp
     const oldStyle = document.getElementById('vip-marquee-style');
     if (oldStyle) oldStyle.remove();
     const oldMarquee = document.getElementById('vip-marquee');
     if (oldMarquee) oldMarquee.remove();
 
-    // 2. Tạo CSS Keyframes động
     const style = document.createElement('style');
     style.id = 'vip-marquee-style';
     style.innerHTML = `
         @keyframes vipMarqueeRun {
-            0% { transform: translateX(100%); } /* Bắt đầu từ ngoài mép phải */
-            100% { transform: translateX(-100%); } /* Chạy sang ngoài mép trái */
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
         }
         .vip-rainbow-text {
             font-family: 'Segoe UI', sans-serif;
@@ -164,57 +171,40 @@ function showBigSpenderEffect(message) {
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            /* Hiệu ứng 7 màu */
             background: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8f00ff);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
             text-shadow: 0px 0px 6px rgba(255, 255, 255, 0.4);
             white-space: nowrap;
-            padding-right: 30px; /* Đệm đuôi */
+            padding-right: 30px;
         }
     `;
     document.head.appendChild(style);
 
-    // 3. Tạo thanh chứa Marquee
     const marquee = document.createElement('div');
     marquee.id = 'vip-marquee';
     marquee.style.cssText = `
-        position: fixed;
-        top: 0; 
-        left: 0;
-        width: 100%;
-        height: 48px;
-        background: rgba(0, 0, 0, 0.9);
-        border-bottom: 2px solid #f1c40f;
-        box-shadow: 0 3px 10px rgba(241, 196, 15, 0.35);
-        z-index: 100000; /* Nổi lên trên cùng */
-        display: flex;
-        align-items: center;
-        overflow: hidden;
-        pointer-events: none;
+        position: fixed; top: 0; left: 0; width: 100%; height: 48px;
+        background: rgba(0, 0, 0, 0.9); border-bottom: 2px solid #f1c40f;
+        box-shadow: 0 3px 10px rgba(241, 196, 15, 0.35); z-index: 100000;
+        display: flex; align-items: center; overflow: hidden; pointer-events: none;
     `;
 
-    // 4. Tạo nội dung chữ chạy
     const content = document.createElement('div');
     content.className = 'vip-rainbow-text';
     content.innerHTML = `💎 📢 ĐẠI GIA XUẤT HIỆN: ${message} 💎`;
-    
-    // Cấu hình chạy: 12 giây 1 vòng, lặp 3 lần, chuyển động đều (linear)
     content.style.animation = "vipMarqueeRun 12s linear 3"; 
     
-    // 5. Gắn vào DOM
     marquee.appendChild(content);
     document.body.appendChild(marquee);
 
-    // 6. Tự động xóa khi chạy xong
     content.addEventListener('animationend', () => {
         marquee.remove();
         style.remove();
     });
 }
 
-// --- HÀM KÍCH HOẠT CHẾ ĐỘ KHÁCH ---
 function activeGuestMode() {
     console.log("Kích hoạt chế độ Khách");
     currentState.userRole = 'guest';
@@ -233,7 +223,6 @@ function activeGuestMode() {
     updateNotificationUI();
 }
 
-// --- LOGIC UI NÚT BẮT ĐẦU ---
 function disableStartGameBtn() {
     if(ui.btnStartGame) {
         ui.btnStartGame.disabled = true;
@@ -252,7 +241,6 @@ function enableStartGameBtn() {
     }
 }
 
-// --- 2. HÀM LOGIC BẢO TRÌ & KICK ---
 function checkMaintenanceAndKick() {
     if (maintenanceInterval) clearInterval(maintenanceInterval);
 
@@ -282,7 +270,6 @@ function checkMaintenanceAndKick() {
     maintenanceInterval = setInterval(performCheck, 1000);
 }
 
-// --- 3. HÀM CẬP NHẬT GIAO DIỆN THÔNG BÁO CHẠY (BẢO TRÌ) ---
 function updateNotificationUI() {
     const config = currentState.config;
     if (!config || (!auth.currentUser && !currentState.isGuestActive)) {
@@ -321,7 +308,6 @@ function updateNotificationUI() {
     }
 }
 
-// --- CÁC HÀM UI PHỤ TRỢ ---
 function updateUserUI(email, coins, vncoin, role) {
     ui.greeting.textContent = `Hi, ${email}`;
     ui.balance.innerHTML = `💰 ${coins.toLocaleString()} | 🟡 ${vncoin.toLocaleString()}`;
@@ -344,19 +330,22 @@ function updateUserUI(email, coins, vncoin, role) {
 }
 
 // --- 4. HÀM KHỞI TẠO GAME & SỰ KIỆN ---
-function initGame() {
+function initGameEvents() {
+    // Đảm bảo chỉ gắn sự kiện 1 lần
+    if (window.isGameInitialized) return;
+    window.isGameInitialized = true;
+
     loadImages();
 
     const ctx = ui.canvas.getContext('2d');
     ui.canvas.width = 1200; 
     ui.canvas.height = 600;
 
-    const game = new GameCore(ui.canvas);
-
     // SỰ KIỆN AUTH
     if (ui.btnOpenAuth) {
         ui.btnOpenAuth.addEventListener('click', () => {
-            document.getElementById('modal-auth-selection').classList.remove('hidden');
+            const modal = document.getElementById('modal-auth-selection');
+            if(modal) modal.classList.remove('hidden');
         });
     }
 
@@ -372,7 +361,7 @@ function initGame() {
     const btnPlayGuest = document.getElementById('btn-play-guest');
     if (btnPlayGuest) {
         btnPlayGuest.addEventListener('click', () => {
-            closeModal('modal-auth-selection');
+            window.closeModal('modal-auth-selection');
             activeGuestMode(); 
         });
     }
@@ -386,29 +375,37 @@ function initGame() {
                 return;
             }
             document.getElementById('lobby-screen').classList.add('hidden');
-            game.start();
+            
+            // Khởi tạo GameCore mới mỗi lần bấm Start để reset game
+            if (!gameInstance) {
+                gameInstance = new GameCore(ui.canvas);
+            }
+            gameInstance.start();
         });
     }
 
     const btnTutorial = document.getElementById('btn-tutorial');
     if (btnTutorial) {
         btnTutorial.addEventListener('click', () => {
-            document.getElementById('modal-tutorial').classList.remove('hidden');
+            const modal = document.getElementById('modal-tutorial');
+            if(modal) modal.classList.remove('hidden');
         });
     }
 
-    // SỰ KIỆN GAME & PAUSE
+    // SỰ KIỆN GAME & PAUSE (Kiểm tra null an toàn)
     const btnPause = document.getElementById('btn-pause-game');
-    if (btnPause) btnPause.addEventListener('click', () => game.togglePause());
+    if (btnPause) btnPause.addEventListener('click', () => { if(gameInstance) gameInstance.togglePause(); });
 
     const btnResume = document.getElementById('btn-resume');
-    if (btnResume) btnResume.addEventListener('click', () => game.togglePause());
+    if (btnResume) btnResume.addEventListener('click', () => { if(gameInstance) gameInstance.togglePause(); });
 
     const btnRestartPause = document.getElementById('btn-restart-pause');
     if (btnRestartPause) {
         btnRestartPause.addEventListener('click', () => {
-            game.togglePause();
-            game.start();
+            if(gameInstance) {
+                gameInstance.togglePause();
+                gameInstance.start();
+            }
         });
     }
 
@@ -420,8 +417,11 @@ function initGame() {
             document.getElementById('btn-pause-game').classList.add('hidden');
             document.getElementById('overlay-screen').classList.add('hidden');
             document.getElementById('lobby-screen').classList.remove('hidden');
-            game.isPaused = true; 
-            cancelAnimationFrame(game.animationId);
+            
+            if (gameInstance) {
+                gameInstance.isPaused = true; 
+                cancelAnimationFrame(gameInstance.animationId);
+            }
         });
     }
 
