@@ -22,7 +22,7 @@
             background: rgba(0, 0, 0, 0.85);
             color: #f1c40f;
             z-index: 9999;
-            display: none; /* Mặc định ẩn, JS sẽ hiện khi có tin */
+            display: none; 
             align-items: center;
             overflow: hidden;
             white-space: nowrap;
@@ -75,7 +75,6 @@
             max-width: 600px;
             padding-bottom: 5px;
         }
-        /* Ẩn thanh cuộn nhưng vẫn cuộn được */
         #plant-shop-bar::-webkit-scrollbar {
             height: 5px;
         }
@@ -89,6 +88,34 @@
 
     <div id="notification-bar">
         <span id="notification-text">📢 Hệ thống đang tải dữ liệu...</span>
+    </div>
+
+    <div id="data-error-popup" style="
+        display: none; 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.85); z-index: 10000; 
+        justify-content: center; align-items: center; text-align: center; color: white;
+        font-family: 'Segoe UI', sans-serif;">
+        
+        <div style="background: #c0392b; padding: 40px; border-radius: 10px; border: 2px solid #e74c3c; max-width: 500px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+            <h1 style="margin: 0 0 20px 0; font-size: 50px;">⚠️</h1>
+            <h2 style="margin-bottom: 10px;">LỖI DỮ LIỆU GAME</h2>
+            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Admin chưa thêm cây trồng hoặc zombie vào hệ thống.<br>
+                Vui lòng liên hệ Admin để xử lý.<br>
+                Xin cảm ơn.
+            </p>
+            <button onclick="location.reload()" style="
+                padding: 10px 20px; border: none; 
+                background: white; color: #c0392b; font-weight: bold; 
+                cursor: pointer; border-radius: 5px; font-size: 16px;">
+                🔄 Tải lại trang
+            </button>
+            
+            <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 10px;">
+                <a href="login.html" style="color: #f1c40f; text-decoration: none; font-size: 14px;">Đăng nhập Admin để sửa lỗi</a>
+            </div>
+        </div>
     </div>
 
     <div id="game-header">

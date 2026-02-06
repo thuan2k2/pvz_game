@@ -1,7 +1,6 @@
 // src/main.js
 import { monitorAuthState, logoutUser, listenToUserData } from './firebase/auth.js';
 import { auth, db } from './firebase/config.js'; 
-// [SỬA LỖI] Đổi về import từ node_modules
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore'; 
 
@@ -31,6 +30,7 @@ let unsubscribeUser = null;
 let unsubscribeSystem = null; 
 let maintenanceInterval = null; 
 let gameInstance = null; 
+let isDataValid = false; // Biến kiểm tra dữ liệu có hợp lệ không
 
 let currentState = {
     userRole: null, 
@@ -41,9 +41,24 @@ let currentState = {
 // --- 1. LOGIC AUTH & REALTIME UPDATE ---
 monitorAuthState(async (user) => {
     
-    // Tải dữ liệu Cây/Zombie từ Server
+    // [QUAN TRỌNG] Tải dữ liệu Cây/Zombie từ Server và kiểm tra
     try {
-        await fetchPlantsFromServer();
+        const result = await fetchPlantsFromServer();
+        if (result.success) {
+            isDataValid = true;
+        } else {
+            // Nếu dữ liệu thiếu -> Hiện Popup Lỗi và vô hiệu hóa nút Start
+            isDataValid = false;
+            document.getElementById('data-error-popup').style.display = 'flex';
+            
+            // Vô hiệu hóa nút start ngay lập tức
+            if(ui.btnStartGame) {
+                ui.btnStartGame.disabled = true;
+                ui.btnStartGame.textContent = "⚠️ Lỗi Dữ Liệu";
+                ui.btnStartGame.style.backgroundColor = "#c0392b";
+            }
+            return; // Dừng logic tại đây nếu lỗi dữ liệu nghiêm trọng
+        }
     } catch (e) {
         console.error("Lỗi tải dữ liệu cây:", e);
     }
@@ -83,7 +98,9 @@ monitorAuthState(async (user) => {
 
         ui.btnOpenAuth.classList.add('hidden');
         ui.btnLogoutLobby.classList.remove('hidden');
-        enableStartGameBtn(); 
+        
+        // Chỉ bật nút start nếu dữ liệu hợp lệ
+        if (isDataValid) enableStartGameBtn(); 
 
         if (unsubscribeUser) unsubscribeUser();
         
@@ -139,7 +156,7 @@ monitorAuthState(async (user) => {
             disableStartGameBtn();
             ui.notifBar.style.display = 'none'; 
         } else {
-            activeGuestMode();
+            if (isDataValid) activeGuestMode();
         }
     }
 
@@ -201,6 +218,9 @@ function showBigSpenderEffect(message) {
 }
 
 function activeGuestMode() {
+    // Nếu dữ liệu không hợp lệ thì không cho active
+    if (!isDataValid) return;
+
     currentState.userRole = 'guest';
     currentState.isGuestActive = true;
 
@@ -227,7 +247,8 @@ function disableStartGameBtn() {
 }
 
 function enableStartGameBtn() {
-    if(ui.btnStartGame) {
+    // Chỉ enable nếu dữ liệu đã hợp lệ
+    if(ui.btnStartGame && isDataValid) {
         ui.btnStartGame.disabled = false;
         ui.btnStartGame.style.opacity = "1";
         ui.btnStartGame.style.cursor = "pointer";
@@ -362,6 +383,10 @@ function initGameEvents() {
     const btnStart = document.getElementById('btn-start-game');
     if (btnStart) {
         btnStart.addEventListener('click', () => {
+            if (!isDataValid) {
+                alert("Game chưa sẵn sàng: Thiếu dữ liệu Cây/Zombie!");
+                return;
+            }
             if (!auth.currentUser && !currentState.isGuestActive) {
                 alert("Vui lòng đăng nhập hoặc chọn chế độ Khách!");
                 return;

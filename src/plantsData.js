@@ -7,16 +7,20 @@ export const PLANT_DATA = {};
 
 export async function fetchPlantsFromServer() {
     try {
-        console.log("📡 Đang tải dữ liệu cây từ Firestore...");
+        console.log("📡 Đang tải dữ liệu từ Firestore...");
         
         // Reset lại mỗi lần fetch để tránh trùng lặp
         for (const key in PLANT_DATA) delete PLANT_DATA[key];
 
         const querySnapshot = await getDocs(collection(db, "game_data"));
 
+        // Biến đếm để kiểm tra điều kiện (Yêu cầu phải có ít nhất 1 cây và 1 zombie)
+        let plantCount = 0;
+        let zombieCount = 0;
+
         if (querySnapshot.empty) {
             console.log("⚠️ Server chưa có dữ liệu 'game_data'.");
-            return false;
+            return { success: false, reason: "empty" };
         }
 
         querySnapshot.forEach((doc) => {
@@ -24,15 +28,14 @@ export async function fetchPlantsFromServer() {
             const id = data.id;
 
             // 1. XỬ LÝ DỮ LIỆU CÂY TRỒNG (PLANTS)
-            // Nếu type là 'plants' hoặc không có type (dữ liệu cũ mặc định là cây)
             if (!data.type || data.type === 'plants') {
+                plantCount++; // Tăng đếm
                 PLANT_DATA[id] = {
                     name: data.name || "Unknown",
-                    type: 'plants', // Đánh dấu loại
+                    type: 'plants', 
                     cost: Number(data.price) || 100, 
                     
-                    // [QUAN TRỌNG] Lấy thêm trường hành vi (behavior) từ Admin
-                    // Mặc định là 'shooter' nếu chưa cài đặt
+                    // Lấy thêm trường hành vi (behavior) từ Admin
                     behavior: data.behavior || "shooter", 
                     
                     assets: {
@@ -48,28 +51,35 @@ export async function fetchPlantsFromServer() {
                 };
             }
             // 2. XỬ LÝ DỮ LIỆU ZOMBIE
-            // Lưu cả zombie vào đây để GameCore/Zombie.js có thể tra cứu chỉ số
             else if (data.type === 'zombies') {
+                zombieCount++; // Tăng đếm
                 PLANT_DATA[id] = {
                     name: data.name || "Zombie",
-                    type: 'zombies', // Đánh dấu loại
+                    type: 'zombies', 
                     assets: {
-                        plant: data.plantImage || `assets/zombie/${id}.png` // Zombie dùng ảnh 'plant' làm sprite chính
+                        plant: data.plantImage || `assets/zombie/${id}.png` 
                     },
                     stats: {
                         damage: Number(data.damage) || 1,
-                        speed: Number(data.speed) || 0.2, // Tốc độ chạy
+                        speed: Number(data.speed) || 0.2, 
                         hp: Number(data.hp) || 100
                     }
                 };
             }
         });
 
-        console.log("✅ Đã đồng bộ dữ liệu hoàn tất:", PLANT_DATA);
-        return true;
+        // [QUAN TRỌNG] Kiểm tra điều kiện: Phải có ít nhất 1 cây và 1 zombie
+        if (plantCount > 0 && zombieCount > 0) {
+            console.log(`✅ Đã tải: ${plantCount} cây, ${zombieCount} zombie.`);
+            return { success: true };
+        } else {
+            console.warn(`⚠️ Dữ liệu không đủ để bắt đầu game: ${plantCount} cây, ${zombieCount} zombie.`);
+            // Trả về false để kích hoạt Popup lỗi bên main.js
+            return { success: false, reason: "insufficient" };
+        }
 
     } catch (error) {
-        console.error("❌ Lỗi tải dữ liệu cây:", error);
-        return false;
+        console.error("❌ Lỗi tải dữ liệu:", error);
+        return { success: false, reason: "error" };
     }
 }
