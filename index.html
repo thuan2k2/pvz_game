@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PvZ He He</title>
+    <title>PvZ: Origins</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css"> 
@@ -52,116 +52,155 @@
             display: flex; flex-direction: column;
         }
         
-        /* 1. TOP NAV BAR */
+        /* 1. TOP NAV BAR (FIX LỖI CANH GIỮA) */
         .lol-top-nav {
-            height: 80px;
+            height: 80px; width: 100%; /* Đảm bảo full width */
             background: linear-gradient(to bottom, #1e2328, #0a0c10);
             border-bottom: 2px solid var(--lol-gold-dim);
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 40px;
+            padding: 0 30px; box-sizing: border-box; /* Padding không làm vỡ width */
             box-shadow: 0 5px 20px rgba(0,0,0,0.8);
             position: relative; z-index: 10;
         }
 
-        .nav-left { display: flex; align-items: center; gap: 30px; }
+        .nav-left { display: flex; align-items: center; gap: 40px; }
         .lol-logo-text {
             font-family: 'Cinzel', serif; font-size: 24px; color: var(--lol-gold);
             text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);
             font-weight: bold; letter-spacing: 2px;
             cursor: default;
+            margin-right: 20px;
         }
         
         .lol-menu-item {
             font-size: 14px; font-weight: bold; text-transform: uppercase;
             color: var(--lol-text-grey); cursor: pointer;
             letter-spacing: 1.5px; transition: 0.3s;
-            position: relative;
+            position: relative; height: 80px; line-height: 80px; /* Canh giữa theo chiều dọc */
         }
         .lol-menu-item:hover, .lol-menu-item.active { color: #f0e6d2; text-shadow: 0 0 8px rgba(240, 230, 210, 0.6); }
         .lol-menu-item.active::after {
-            content: ''; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent;
             border-bottom: 10px solid var(--lol-gold);
         }
 
-        .nav-right { display: flex; align-items: center; gap: 20px; }
+        .nav-right { display: flex; align-items: center; gap: 25px; }
         
-        .currency-container { display: flex; gap: 15px; font-size: 13px; color: #f0e6d2; }
-        .currency-item { display: flex; align-items: center; gap: 5px; }
+        .currency-container { display: flex; gap: 20px; font-size: 13px; color: #f0e6d2; margin-right: 20px;}
+        .currency-item { display: flex; align-items: center; gap: 5px; font-weight: bold;}
         
-        .user-profile-mini { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .user-profile-mini { display: flex; align-items: center; gap: 15px; cursor: pointer; }
         .profile-name { text-align: right; }
-        .profile-name div:first-child { font-weight: bold; color: #f0e6d2; font-size: 14px; }
-        .profile-name div:last-child { font-size: 11px; color: var(--lol-cyan); }
+        .profile-name div:first-child { font-weight: bold; color: #f0e6d2; font-size: 15px; }
+        .profile-name div:last-child { font-size: 12px; color: var(--lol-cyan); margin-top: 2px; }
         .avatar-circle {
-            width: 45px; height: 45px; border-radius: 50%;
+            width: 50px; height: 50px; border-radius: 50%;
             border: 2px solid var(--lol-gold);
             background: url('assets/card/Peashooter.png') no-repeat center/cover;
             background-color: #000;
             box-shadow: 0 0 10px var(--lol-gold);
         }
 
-        /* 2. MAIN CONTENT AREA */
-        .lol-main-content { flex: 1; display: flex; position: relative; }
+        /* 2. MAIN CONTENT AREA (FIX LAYOUT) */
+        .lol-main-content { 
+            flex: 1; display: flex; position: relative; 
+            overflow: hidden; /* Tránh thanh cuộn thừa */
+        }
 
         .featured-banner {
-            flex: 1; margin: 30px 300px 30px 40px;
+            flex: 1; 
+            /* Xóa margin cứng để banner tràn màn hình bên trái */
+            margin: 0; 
             position: relative;
             display: flex; flex-direction: column; justify-content: flex-end;
+            padding: 40px; /* Padding nội dung bên trong */
         }
         
+        /* FIX DANH SÁCH BẠN BÈ (SOCIAL SIDEBAR) */
         .lol-social-sidebar {
-            width: 250px; background: rgba(1, 10, 19, 0.95);
+            width: 280px; 
+            background: rgba(1, 10, 19, 0.95);
             border-left: 2px solid #1e2328;
-            position: absolute; right: 0; top: 0; bottom: 0;
+            /* Neo vào bên phải */
+            position: relative; 
+            right: 0; top: 0; bottom: 0;
             display: flex; flex-direction: column;
-            padding: 10px;
+            padding: 15px;
+            z-index: 5;
         }
-        .social-header { font-size: 12px; font-weight: bold; color: var(--lol-text-grey); margin-bottom: 10px; text-transform: uppercase; }
+        .social-header { 
+            font-size: 13px; font-weight: bold; color: var(--lol-text-grey); 
+            margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;
+        }
         .friend-item {
-            display: flex; align-items: center; gap: 10px; padding: 8px;
-            transition: 0.2s; cursor: pointer;
+            display: flex; align-items: center; gap: 10px; padding: 10px;
+            transition: 0.2s; cursor: pointer; border-radius: 4px;
         }
         .friend-item:hover { background: rgba(255,255,255,0.05); }
-        .friend-avatar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--lol-gold); }
-        .friend-info { font-size: 12px; color: #cdbe91; }
-        .friend-status { font-size: 10px; color: var(--lol-cyan); }
+        .friend-avatar { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--lol-gold); }
+        .friend-info { font-size: 13px; color: #cdbe91; font-weight: 500; }
+        .friend-status { font-size: 11px; color: var(--lol-cyan); }
 
+        /* FIX VỊ TRÍ NÚT PLAY & HƯỚNG DẪN */
         .lol-action-area {
-            position: absolute; bottom: 40px; right: 280px; 
-            display: flex; gap: 15px;
+            /* Neo tuyệt đối vào góc dưới bên phải của banner (trước sidebar) */
+            position: absolute; 
+            bottom: 50px; 
+            right: 320px; /* Cách sidebar (280px) + khoảng đệm */
+            display: flex; gap: 20px; align-items: flex-end;
+            z-index: 20;
         }
 
+        /* NÚT PLAY ĐẶC TRƯNG */
         .lol-play-btn {
             background: linear-gradient(to bottom, #1e2328, #13171d);
             border: 2px solid var(--lol-blue-bright);
             color: #f0e6d2;
             font-family: 'Cinzel', serif;
-            font-size: 20px; font-weight: bold; letter-spacing: 2px;
-            padding: 12px 50px;
+            font-size: 24px; font-weight: bold; letter-spacing: 2px;
+            padding: 15px 60px; /* To hơn */
             cursor: pointer;
             position: relative;
-            box-shadow: 0 0 15px rgba(0, 90, 130, 0.6);
+            box-shadow: 0 0 20px rgba(0, 90, 130, 0.6);
             transition: 0.3s;
             text-transform: uppercase;
+            /* Tạo hình bình hành nhẹ nếu muốn giống LoL hơn */
+            transform: skew(-10deg); 
         }
+        /* Chỉnh lại text bên trong nút do skew */
+        .lol-play-btn span { display: block; transform: skew(10deg); }
         
         .lol-play-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #005a82, #004260);
             border-color: var(--lol-cyan);
             text-shadow: 0 0 10px #fff;
-            box-shadow: 0 0 25px var(--lol-cyan);
+            box-shadow: 0 0 30px var(--lol-cyan);
         }
         
-        .lol-play-btn:disabled { filter: grayscale(1); opacity: 0.6; cursor: not-allowed; }
-
-        .lol-sub-btn {
-            background: transparent; border: 1px solid var(--lol-gold-dim);
-            color: var(--lol-gold); padding: 8px 20px;
-            font-weight: bold; cursor: pointer; transition: 0.2s;
-            font-size: 12px; text-transform: uppercase;
+        .lol-play-btn:disabled { 
+            filter: grayscale(1); opacity: 0.6; cursor: not-allowed; 
+            border-color: #333;
         }
-        .lol-sub-btn:hover { border-color: #f0e6d2; color: #f0e6d2; background: rgba(200, 170, 110, 0.1); }
+
+        /* Nút phụ (Hướng dẫn) - FIX LỖI TÀNG HÌNH */
+        .lol-sub-btn {
+            background: rgba(1, 10, 19, 0.8); /* Thêm màu nền */
+            border: 1px solid var(--lol-gold-dim);
+            color: var(--lol-gold); 
+            padding: 12px 30px;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
+            /* Tạo hình bình hành */
+            transform: skew(-10deg);
+        }
+        .lol-sub-btn span { display: block; transform: skew(10deg); }
+
+        .lol-sub-btn:hover { 
+            border-color: #f0e6d2; color: #f0e6d2; 
+            background: rgba(200, 170, 110, 0.2); 
+            box-shadow: 0 0 10px rgba(200, 170, 110, 0.3);
+        }
 
         /* --- MODALS --- */
         .modal { 
@@ -193,14 +232,14 @@
 <body>
 
     <div id="notification-bar">
-        <span id="notification-text">📢 Welcome to PvZ Battlegrounds...</span>
+        <span id="notification-text">📢 Welcome to PvZ: Origins - Open Beta...</span>
     </div>
 
     <div id="data-error-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; text-align: center; color: white;">
         <div style="background: #1e2328; padding: 40px; border: 2px solid #c0392b; max-width: 500px;">
             <h1 style="margin: 0 0 20px 0; color:#c0392b">⚠️ SYSTEM ERROR</h1>
             <p>Admin data not found (Plants/Zombies).</p>
-            <button onclick="location.reload()" class="lol-sub-btn" style="margin-top:20px;">RECONNECT</button>
+            <button onclick="location.reload()" class="lol-sub-btn" style="margin-top:20px;"><span>RECONNECT</span></button>
             <div style="margin-top:15px;"><a href="login.html" style="color:#aaa; font-size:12px;">Admin Login</a></div>
         </div>
     </div>
@@ -232,26 +271,32 @@
 
         <div class="lol-main-content">
             <div class="featured-banner">
-                <div style="position: absolute; top: 20%; left: 5%; color: white; text-shadow: 0 0 10px black;">
-                    <h1 style="font-family: 'Cinzel', serif; font-size: 40px; margin: 0; color: var(--lol-gold);">SỰ KIỆN MỚI</h1>
-                    <h2 style="font-size: 20px; color: var(--lol-cyan); margin-top: 5px;">THỨC TỈNH WALL-NUT</h2>
-                    <p style="width: 300px; color: #a09b8c;">Tham gia ngay để nhận trang phục Wall-nut Hoàng Kim giới hạn.</p>
+                <div style="position: absolute; top: 15%; left: 5%; color: white; text-shadow: 0 0 10px black; width: 400px;">
+                    <h3 style="color:var(--lol-gold); font-size:14px; letter-spacing:2px; margin-bottom:5px;">SỰ KIỆN MỚI</h3>
+                    <h1 style="font-family: 'Cinzel', serif; font-size: 48px; margin: 0; color: #fff; line-height: 1.1;">THỨC TỈNH<br>WALL-NUT</h1>
+                    <p style="color: #a09b8c; margin-top: 15px; font-size: 14px; line-height: 1.5;">
+                        Tham gia ngay chế độ phiêu lưu để nhận trang phục Wall-nut Hoàng Kim giới hạn và hàng ngàn phần quà hấp dẫn.
+                    </p>
                 </div>
             </div>
+
             <div class="lol-action-area">
-                <button class="lol-sub-btn" id="btn-tutorial">HƯỚNG DẪN</button>
-                <button id="btn-start-game" class="lol-play-btn" disabled>ĐẤU NGAY</button>
+                <button class="lol-sub-btn" id="btn-tutorial"><span>HƯỚNG DẪN</span></button>
+                <button id="btn-start-game" class="lol-play-btn" disabled><span>ĐẤU NGAY</span></button>
             </div>
+
             <div class="lol-social-sidebar">
-                <div class="social-header">Danh sách bạn bè (0/0)</div>
-                <div style="flex:1; display:flex; justify-content:center; align-items:center; color:#555; font-size:12px; font-style:italic;">Chưa có bạn bè online</div>
-            </div>
+                <div class="social-header">DANH SÁCH BẠN BÈ (0/0)</div>
+                <div style="flex:1; display:flex; justify-content:center; align-items:center; color:#555; font-size:12px; font-style:italic;">
+                    Chưa có bạn bè online
+                </div>
+                </div>
         </div>
     </div>
 
     <div id="game-header" style="position:fixed; top:0; right:0; z-index:90; padding:10px; display:none;">
         <div class="header-actions">
-            <button id="btn-pause-game" class="lol-sub-btn" style="background:rgba(0,0,0,0.8);">⏸ MENU</button>
+            <button id="btn-pause-game" class="lol-sub-btn" style="background:rgba(0,0,0,0.8); transform:none;"><span>⏸ MENU</span></button>
         </div>
     </div>
 
@@ -279,9 +324,9 @@
     <div id="modal-pause-menu" class="modal hidden">
         <div class="modal-content">
             <h2 style="color:var(--lol-gold);">TẠM DỪNG</h2>
-            <button id="btn-resume" class="lol-sub-btn" style="width:100%; margin:5px 0;">TIẾP TỤC</button>
-            <button id="btn-restart-pause" class="lol-sub-btn" style="width:100%; margin:5px 0;">CHƠI LẠI</button>
-            <button id="btn-quit-lobby" class="lol-sub-btn" style="width:100%; margin:5px 0; border-color:#c0392b; color:#c0392b;">THOÁT TRẬN</button>
+            <button id="btn-resume" class="lol-sub-btn" style="width:100%; margin:5px 0; transform:none;"><span>TIẾP TỤC</span></button>
+            <button id="btn-restart-pause" class="lol-sub-btn" style="width:100%; margin:5px 0; transform:none;"><span>CHƠI LẠI</span></button>
+            <button id="btn-quit-lobby" class="lol-sub-btn" style="width:100%; margin:5px 0; border-color:#c0392b; color:#c0392b; transform:none;"><span>THOÁT TRẬN</span></button>
         </div>
     </div>
 
@@ -293,8 +338,8 @@
                     <p>Điểm: <span id="final-score" style="color:white; font-weight:bold;">0</span></p>
                     <p id="reward-section">Thưởng: <span id="reward-coin" style="color:gold;">0</span> Coin</p>
                 </div>
-                <button id="btn-restart" class="lol-sub-btn">CHƠI LẠI</button>
-                <button id="btn-back-lobby" class="lol-sub-btn">VỀ SẢNH</button>
+                <button id="btn-restart" class="lol-sub-btn" style="transform:none;"><span>CHƠI LẠI</span></button>
+                <button id="btn-back-lobby" class="lol-sub-btn" style="transform:none;"><span>VỀ SẢNH</span></button>
             </div>
         </div>
     </div>
@@ -306,7 +351,7 @@
             <button class="auth-choice-btn" onclick="window.location.href='register.html'">TẠO TÀI KHOẢN</button>
             <div style="margin:15px 0; height:1px; background:#333;"></div>
             <button id="btn-play-guest" class="auth-choice-btn" style="border-color:#f1c40f; color:#f1c40f;">CHẾ ĐỘ KHÁCH</button>
-            <button class="lol-sub-btn" onclick="closeModal('modal-auth-selection')" style="margin-top: 20px; border:none;">Đóng</button>
+            <button class="lol-sub-btn" onclick="closeModal('modal-auth-selection')" style="margin-top: 20px; border:none; transform:none;"><span>Đóng</span></button>
         </div>
     </div>
 
@@ -320,7 +365,7 @@
                 <li>🍃 <b>Thuốc Tăng Lực:</b> Dùng trong Shop để kích hoạt kỹ năng tối thượng.</li>
             </ul>
             <div style="text-align:center; margin-top:20px;">
-                <button class="lol-sub-btn" onclick="closeModal('modal-tutorial')">ĐÃ HIỂU</button>
+                <button class="lol-sub-btn" onclick="closeModal('modal-tutorial')" style="transform:none;"><span>ĐÃ HIỂU</span></button>
             </div>
         </div>
     </div>
