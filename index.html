@@ -3,250 +3,331 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plants vs. Zombies - Clone Edition</title>
+    <title>PvZ - League Client Style</title>
     <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css"> 
     
-    <meta name="title" content="Plants vs. Zombies Online">
-    <meta name="description" content="Trải nghiệm ngay trò chơi PvZ phiên bản Web kết nối Firebase.">
-
     <style>
-        /* CSS CHO DÒNG CHỮ CHẠY (MARQUEE) */
-        #notification-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 30px;
-            background: rgba(0, 0, 0, 0.85);
-            color: #f1c40f;
-            z-index: 9999;
-            display: none; 
-            align-items: center;
-            overflow: hidden;
-            white-space: nowrap;
-            border-bottom: 1px solid #c0392b;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        /* --- HEX TECH THEME --- */
+        :root {
+            --lol-dark-blue: #010a13;
+            --lol-panel-bg: rgba(1, 10, 19, 0.9);
+            --lol-gold: #c8aa6e;
+            --lol-gold-dim: #785a28;
+            --lol-blue-bright: #005a82;
+            --lol-cyan: #0acbe6;
+            --lol-text-grey: #a09b8c;
+            --lol-border: 1px solid #3c3c41;
         }
 
-        #notification-text {
-            display: inline-block;
-            padding-left: 100%;
-            animation: marquee 20s linear infinite;
-            font-family: 'Segoe UI', sans-serif;
-            font-weight: bold;
-            font-size: 14px;
+        body {
+            margin: 0; padding: 0;
+            background-color: #000;
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+            color: #f0e6d2;
+            user-select: none;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- NOTIFICATION BAR --- */
+        #notification-bar {
+            position: fixed; top: 0; left: 0; width: 100%; height: 30px;
+            background: rgba(16, 20, 25, 0.95); border-bottom: 1px solid var(--lol-gold);
+            color: var(--lol-gold); z-index: 9999; display: none; align-items: center; white-space: nowrap;
+        }
+        #notification-text { display: inline-block; padding-left: 100%; animation: marquee 20s linear infinite; font-size: 12px; font-weight: bold; letter-spacing: 1px;}
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+
+        /* --- GAME CONTAINER --- */
+        #game-canvas { background: #000; display: block; margin: 0 auto; }
+
+        /* --- LOBBY SCREEN (STYLE LOL) --- */
+        #lobby-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://w.wallhaven.cc/full/lm/wallhaven-lmqgjl.jpg') no-repeat center center/cover;
+            z-index: 100;
+            display: flex; flex-direction: column;
+        }
+        
+        /* 1. TOP NAV BAR */
+        .lol-top-nav {
+            height: 80px;
+            background: linear-gradient(to bottom, #1e2328, #0a0c10);
+            border-bottom: 2px solid var(--lol-gold-dim);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 40px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+            position: relative; z-index: 10;
+        }
+
+        .nav-left { display: flex; align-items: center; gap: 30px; }
+        .lol-logo-text {
+            font-family: 'Cinzel', serif; font-size: 24px; color: var(--lol-gold);
+            text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);
+            font-weight: bold; letter-spacing: 2px;
+            cursor: default;
+        }
+        
+        .lol-menu-item {
+            font-size: 14px; font-weight: bold; text-transform: uppercase;
+            color: var(--lol-text-grey); cursor: pointer;
+            letter-spacing: 1.5px; transition: 0.3s;
+            position: relative;
+        }
+        .lol-menu-item:hover, .lol-menu-item.active { color: #f0e6d2; text-shadow: 0 0 8px rgba(240, 230, 210, 0.6); }
+        .lol-menu-item.active::after {
+            content: ''; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent;
+            border-bottom: 10px solid var(--lol-gold);
+        }
+
+        .nav-right { display: flex; align-items: center; gap: 20px; }
+        
+        .currency-container { display: flex; gap: 15px; font-size: 13px; color: #f0e6d2; }
+        .currency-item { display: flex; align-items: center; gap: 5px; }
+        
+        .user-profile-mini { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .profile-name { text-align: right; }
+        .profile-name div:first-child { font-weight: bold; color: #f0e6d2; font-size: 14px; }
+        .profile-name div:last-child { font-size: 11px; color: var(--lol-cyan); }
+        .avatar-circle {
+            width: 45px; height: 45px; border-radius: 50%;
+            border: 2px solid var(--lol-gold);
+            background: url('assets/card/Peashooter.png') no-repeat center/cover;
+            background-color: #000;
+            box-shadow: 0 0 10px var(--lol-gold);
+        }
+
+        /* 2. MAIN CONTENT AREA */
+        .lol-main-content { flex: 1; display: flex; position: relative; }
+
+        .featured-banner {
+            flex: 1; margin: 30px 300px 30px 40px;
+            position: relative;
+            display: flex; flex-direction: column; justify-content: flex-end;
+        }
+        
+        .lol-social-sidebar {
+            width: 250px; background: rgba(1, 10, 19, 0.95);
+            border-left: 2px solid #1e2328;
+            position: absolute; right: 0; top: 0; bottom: 0;
+            display: flex; flex-direction: column;
+            padding: 10px;
+        }
+        .social-header { font-size: 12px; font-weight: bold; color: var(--lol-text-grey); margin-bottom: 10px; text-transform: uppercase; }
+        .friend-item {
+            display: flex; align-items: center; gap: 10px; padding: 8px;
+            transition: 0.2s; cursor: pointer;
+        }
+        .friend-item:hover { background: rgba(255,255,255,0.05); }
+        .friend-avatar { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--lol-gold); }
+        .friend-info { font-size: 12px; color: #cdbe91; }
+        .friend-status { font-size: 10px; color: var(--lol-cyan); }
+
+        .lol-action-area {
+            position: absolute; bottom: 40px; right: 280px; 
+            display: flex; gap: 15px;
+        }
+
+        .lol-play-btn {
+            background: linear-gradient(to bottom, #1e2328, #13171d);
+            border: 2px solid var(--lol-blue-bright);
+            color: #f0e6d2;
+            font-family: 'Cinzel', serif;
+            font-size: 20px; font-weight: bold; letter-spacing: 2px;
+            padding: 12px 50px;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 90, 130, 0.6);
+            transition: 0.3s;
             text-transform: uppercase;
         }
-
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-100%); }
-        }
-
-        body.has-notification #game-header {
-            margin-top: 30px;
-        }
-
-        /* CSS CHO MENU LỰA CHỌN ĐĂNG NHẬP */
-        .auth-choice-btn {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            font-size: 1.1em;
-            cursor: pointer;
-            border: 2px solid #333;
-            border-radius: 8px;
-            font-family: 'Press Start 2P', cursive;
-            transition: transform 0.1s;
-        }
-        .auth-choice-btn:active { transform: scale(0.95); }
-        .btn-login-opt { background: #2980b9; color: white; }
-        .btn-register-opt { background: #27ae60; color: white; }
-        .btn-guest-opt { background: #f39c12; color: white; }
         
-        /* CSS CHO PLANT SHOP BAR (Thanh chọn cây động) */
-        #plant-shop-bar {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            max-width: 600px;
-            padding-bottom: 5px;
+        .lol-play-btn:hover:not(:disabled) {
+            background: linear-gradient(to bottom, #005a82, #004260);
+            border-color: var(--lol-cyan);
+            text-shadow: 0 0 10px #fff;
+            box-shadow: 0 0 25px var(--lol-cyan);
         }
-        #plant-shop-bar::-webkit-scrollbar {
-            height: 5px;
+        
+        .lol-play-btn:disabled { filter: grayscale(1); opacity: 0.6; cursor: not-allowed; }
+
+        .lol-sub-btn {
+            background: transparent; border: 1px solid var(--lol-gold-dim);
+            color: var(--lol-gold); padding: 8px 20px;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+            font-size: 12px; text-transform: uppercase;
         }
-        #plant-shop-bar::-webkit-scrollbar-thumb {
-            background: #27ae60;
-            border-radius: 5px;
+        .lol-sub-btn:hover { border-color: #f0e6d2; color: #f0e6d2; background: rgba(200, 170, 110, 0.1); }
+
+        /* --- MODALS --- */
+        .modal { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); z-index: 2000; 
+            display: flex; justify-content: center; align-items: center; 
+            backdrop-filter: blur(5px);
         }
+        .modal-content {
+            background: #010a13; border: 2px solid var(--lol-gold);
+            padding: 30px; width: 400px; text-align: center;
+            box-shadow: 0 0 30px rgba(200, 170, 110, 0.2);
+            color: #f0e6d2;
+        }
+        .auth-choice-btn {
+            width: 100%; padding: 12px; margin: 8px 0;
+            background: #1e2328; border: 1px solid #3c3c41; color: #f0e6d2;
+            cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .auth-choice-btn:hover { border-color: var(--lol-gold); background: #252a33; }
+
+        .shovel-corner, #game-header { display: none; }
+        body.in-game .shovel-corner { display: block; }
+        body.in-game #game-header { display: flex; }
+        body.in-game #lobby-screen { display: none; }
+
     </style>
 </head>
 <body>
 
     <div id="notification-bar">
-        <span id="notification-text">📢 Hệ thống đang tải dữ liệu...</span>
+        <span id="notification-text">📢 Welcome to PvZ Battlegrounds...</span>
     </div>
 
-    <div id="data-error-popup" style="
-        display: none; 
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-        background: rgba(0,0,0,0.85); z-index: 10000; 
-        justify-content: center; align-items: center; text-align: center; color: white;
-        font-family: 'Segoe UI', sans-serif;">
-        
-        <div style="background: #c0392b; padding: 40px; border-radius: 10px; border: 2px solid #e74c3c; max-width: 500px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-            <h1 style="margin: 0 0 20px 0; font-size: 50px;">⚠️</h1>
-            <h2 style="margin-bottom: 10px;">LỖI DỮ LIỆU GAME</h2>
-            <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                Admin chưa thêm cây trồng hoặc zombie vào hệ thống.<br>
-                Vui lòng liên hệ Admin để xử lý.<br>
-                Xin cảm ơn.
-            </p>
-            <button onclick="location.reload()" style="
-                padding: 10px 20px; border: none; 
-                background: white; color: #c0392b; font-weight: bold; 
-                cursor: pointer; border-radius: 5px; font-size: 16px;">
-                🔄 Tải lại trang
-            </button>
+    <div id="data-error-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; text-align: center; color: white;">
+        <div style="background: #1e2328; padding: 40px; border: 2px solid #c0392b; max-width: 500px;">
+            <h1 style="margin: 0 0 20px 0; color:#c0392b">⚠️ SYSTEM ERROR</h1>
+            <p>Admin data not found (Plants/Zombies).</p>
+            <button onclick="location.reload()" class="lol-sub-btn" style="margin-top:20px;">RECONNECT</button>
+            <div style="margin-top:15px;"><a href="login.html" style="color:#aaa; font-size:12px;">Admin Login</a></div>
+        </div>
+    </div>
+
+    <div id="lobby-screen">
+        <div class="lol-top-nav">
+            <div class="nav-left">
+                <div class="lol-logo-text">PvZ: ORIGINS</div>
+                <div class="lol-menu-item active">TRANG CHỦ</div>
+                <div class="lol-menu-item" onclick="window.location.href='shop.html'">CỬA HÀNG</div>
+                <div class="lol-menu-item hidden" id="btn-admin-nav" onclick="window.location.href='admin.html'">QUẢN TRỊ</div>
+            </div>
             
-            <div style="margin-top: 20px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 10px;">
-                <a href="login.html" style="color: #f1c40f; text-decoration: none; font-size: 14px;">Đăng nhập Admin để sửa lỗi</a>
+            <div class="nav-right">
+                <div class="currency-container hidden" id="lobby-balance-container">
+                    <div class="currency-item"><span style="color:#f0e6d2">💰</span><span id="lobby-coin">0</span></div>
+                    <div class="currency-item"><span style="color:#f0e6d2">🟡</span><span id="lobby-vncoin">0</span></div>
+                </div>
+                <div class="user-profile-mini" id="btn-open-auth-menu">
+                    <div class="profile-name">
+                        <div id="lobby-username">Khách</div>
+                        <div id="lobby-status">Trực tuyến</div>
+                    </div>
+                    <div class="avatar-circle"></div>
+                </div>
+                <div id="btn-lobby-logout" class="hidden" style="cursor:pointer; font-size:18px;" title="Đăng xuất">🚪</div>
+            </div>
+        </div>
+
+        <div class="lol-main-content">
+            <div class="featured-banner">
+                <div style="position: absolute; top: 20%; left: 5%; color: white; text-shadow: 0 0 10px black;">
+                    <h1 style="font-family: 'Cinzel', serif; font-size: 40px; margin: 0; color: var(--lol-gold);">SỰ KIỆN MỚI</h1>
+                    <h2 style="font-size: 20px; color: var(--lol-cyan); margin-top: 5px;">THỨC TỈNH WALL-NUT</h2>
+                    <p style="width: 300px; color: #a09b8c;">Tham gia ngay để nhận trang phục Wall-nut Hoàng Kim giới hạn.</p>
+                </div>
+            </div>
+            <div class="lol-action-area">
+                <button class="lol-sub-btn" id="btn-tutorial">HƯỚNG DẪN</button>
+                <button id="btn-start-game" class="lol-play-btn" disabled>ĐẤU NGAY</button>
+            </div>
+            <div class="lol-social-sidebar">
+                <div class="social-header">Danh sách bạn bè (0/0)</div>
+                <div style="flex:1; display:flex; justify-content:center; align-items:center; color:#555; font-size:12px; font-style:italic;">Chưa có bạn bè online</div>
             </div>
         </div>
     </div>
 
-    <div id="game-header">
-        <div class="user-info">
-            <span id="user-greeting">Chưa đăng nhập</span>
-            <span id="user-balance" class="hidden">💰 0</span>
-        </div>
+    <div id="game-header" style="position:fixed; top:0; right:0; z-index:90; padding:10px; display:none;">
         <div class="header-actions">
-            <button id="btn-pause-game" class="wood-btn small-btn hidden">⏸ Tạm dừng</button>
-            <button id="btn-admin" class="wood-btn small-btn hidden" onclick="window.location.href='admin.html'">🛠 Admin</button>
+            <button id="btn-pause-game" class="lol-sub-btn" style="background:rgba(0,0,0,0.8);">⏸ MENU</button>
         </div>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas"></canvas>
-        
         <div id="game-hud">
-            <div class="hud-item sun-display">☀️ <span id="sun-count">0</span></div>
-            <div class="hud-item score-display">🏆 <span id="score-count">0</span></div>
+            <div class="hud-item sun-display" style="position:absolute; top:10px; left:10px; font-size:20px; color:white; font-weight:bold; text-shadow:2px 2px 0 #000;">☀️ <span id="sun-count">0</span></div>
+            <div class="hud-item score-display" style="position:absolute; top:40px; left:10px; font-size:20px; color:gold; font-weight:bold; text-shadow:2px 2px 0 #000;">🏆 <span id="score-count">0</span></div>
         </div>
-
-        <div id="shovel-tool" class="shovel-corner" title="Dùng xẻng để bỏ cây">
-            <img src="assets/shovel.png" alt="Shovel">
+        <div id="shovel-tool" class="shovel-corner" title="Dùng xẻng để bỏ cây" style="position:absolute; top:10px; right:120px; cursor:pointer;">
+            <img src="assets/shovel.png" alt="Shovel" style="width:50px; background:rgba(0,0,0,0.5); border-radius:5px; border:2px solid #fff;">
         </div>
     </div>
 
-    <div id="bottom-toolbar" class="hidden">
-        <div class="toolbar-inner">
-            <div id="plant-shop-bar">
-                <div style="color:white; font-size:10px; padding:10px;">Đang tải cây...</div>
-            </div>
-            
-            <div id="plant-food-tool" class="tool-btn" style="margin-left: 20px; background: #2ecc71; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #27ae60; border-radius: 5px; width: 60px; height: 70px;" title="Thuốc Tăng Lực">
+    <div id="bottom-toolbar" class="hidden" style="position:fixed; bottom:0; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); padding:10px; border-top:2px solid var(--lol-gold); border-radius:10px 10px 0 0; display:flex; align-items:center;">
+        <div class="toolbar-inner" style="display:flex;">
+            <div id="plant-shop-bar"></div>
+            <div id="plant-food-tool" style="margin-left: 20px; background: #2ecc71; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #27ae60; border-radius: 5px; width: 60px; height: 70px;" title="Thuốc Tăng Lực">
                 <span style="font-size: 24px;">🍃</span>
-                <span id="plant-food-count" style="font-size: 14px; font-weight: bold; text-shadow: 1px 1px 0 #000;">0</span>
+                <span id="plant-food-count" style="font-size: 14px; font-weight: bold;">0</span>
             </div>
-        </div>
-    </div>
-
-    <div id="lobby-screen">
-        <div id="lobby-user-info" class="wood-board corner-btn top-left hidden">
-            <div id="lobby-email" style="color: #f1c40f; font-size: 0.9em; margin-bottom: 5px;">Guest</div>
-            <div id="lobby-balance" style="color: #fff; font-size: 1.1em;">💰 0</div>
-            
-            <button id="btn-lobby-admin" class="wood-btn hidden" 
-                    style="margin-top: 10px; width: 100%; font-size: 0.8em; padding: 5px; background: #c0392b; border-color: #922b21;">
-                🛠 QUẢN TRỊ
-            </button>
-        </div>
-
-        <button id="btn-open-auth-menu" class="wood-btn corner-btn top-right">🔑 Đăng nhập</button>
-        <button id="btn-lobby-logout" class="wood-btn corner-btn top-right hidden">🚪 Đăng xuất</button>
-
-        <button id="btn-tutorial" class="wood-btn corner-btn bottom-left">📖 Hướng dẫn</button>
-        
-        <a href="shop.html" id="btn-shop-link" class="wood-btn corner-btn bottom-right" style="text-decoration:none; display:flex; align-items:center; justify-content:center;">
-            🛒 SHOP VIP
-        </a>
-
-        <div class="lobby-content">
-            <h1 class="game-logo">PLANTS vs. ZOMBIES <br><small>Clone Edition</small></h1>
-            <button id="btn-start-game" class="wood-btn big-start-btn" disabled style="opacity: 0.5; cursor: not-allowed;">⛔ Vui lòng Đăng nhập</button>
-            <div class="lobby-footer" style="margin-top: 20px;">Developed by ThunCaNha</div>
         </div>
     </div>
 
     <div id="modal-pause-menu" class="modal hidden">
-        <div class="pause-box">
-            <h2>ĐÃ TẠM DỪNG</h2>
-            <div class="menu-buttons">
-                <button id="btn-resume" class="wood-btn" style="background: #27ae60;">▶ Tiếp tục</button>
-                <button id="btn-restart-pause" class="wood-btn">🔄 Chơi lại</button>
-                <button id="btn-quit-lobby" class="wood-btn" style="background: #c0392b;">🏠 Về Sảnh</button>
-            </div>
+        <div class="modal-content">
+            <h2 style="color:var(--lol-gold);">TẠM DỪNG</h2>
+            <button id="btn-resume" class="lol-sub-btn" style="width:100%; margin:5px 0;">TIẾP TỤC</button>
+            <button id="btn-restart-pause" class="lol-sub-btn" style="width:100%; margin:5px 0;">CHƠI LẠI</button>
+            <button id="btn-quit-lobby" class="lol-sub-btn" style="width:100%; margin:5px 0; border-color:#c0392b; color:#c0392b;">THOÁT TRẬN</button>
         </div>
     </div>
 
     <div id="overlay-screen" class="hidden">
-        <div class="result-board">
-            <h1 id="result-title">CHIẾN THẮNG!</h1>
-            <div class="result-details">
-                <p>🏆 Điểm số: <span id="final-score" class="highlight">0</span></p>
-                <p id="reward-section">🎁 Phần thưởng: <span id="reward-coin" class="highlight gold">0</span> Coin</p>
-            </div>
-            <div class="result-actions">
-                <button id="btn-back-lobby" class="wood-btn">🏠 Về Sảnh</button>
-                <button id="btn-restart" class="wood-btn" style="background: #27ae60;">🔄 Chơi Lại</button>
+        <div class="modal" style="background:rgba(0,0,0,0.9);">
+            <div class="modal-content" style="border-color:var(--lol-cyan);">
+                <h1 id="result-title" style="color:var(--lol-cyan);">CHIẾN THẮNG</h1>
+                <div style="margin:20px 0;">
+                    <p>Điểm: <span id="final-score" style="color:white; font-weight:bold;">0</span></p>
+                    <p id="reward-section">Thưởng: <span id="reward-coin" style="color:gold;">0</span> Coin</p>
+                </div>
+                <button id="btn-restart" class="lol-sub-btn">CHƠI LẠI</button>
+                <button id="btn-back-lobby" class="lol-sub-btn">VỀ SẢNH</button>
             </div>
         </div>
     </div>
 
     <div id="modal-auth-selection" class="modal hidden">
-        <div class="modal-content" style="width: 400px; text-align: center;">
-            <h2 style="color: #2c3e50; margin-bottom: 20px;">CHỌN CHẾ ĐỘ</h2>
-            
-            <button class="auth-choice-btn btn-login-opt" onclick="window.location.href='login.html'">
-                🔑 Đăng Nhập
-            </button>
-            
-            <button class="auth-choice-btn btn-register-opt" onclick="window.location.href='register.html'">
-                📝 Đăng Ký
-            </button>
-            
-            <hr style="margin: 15px 0; border: 1px dashed #ccc;">
-            
-            <button id="btn-play-guest" class="auth-choice-btn btn-guest-opt">
-                👤 Chơi Ngay (Khách)
-            </button>
-
-            <button class="wood-btn" onclick="closeModal('modal-auth-selection')" style="margin-top: 15px; background: #95a5a6;">Đóng</button>
+        <div class="modal-content">
+            <h2 style="color: var(--lol-gold); margin-bottom: 20px; font-family:'Cinzel', serif;">ĐĂNG NHẬP</h2>
+            <button class="auth-choice-btn" onclick="window.location.href='login.html'">TÀI KHOẢN RIOT (Email)</button>
+            <button class="auth-choice-btn" onclick="window.location.href='register.html'">TẠO TÀI KHOẢN</button>
+            <div style="margin:15px 0; height:1px; background:#333;"></div>
+            <button id="btn-play-guest" class="auth-choice-btn" style="border-color:#f1c40f; color:#f1c40f;">CHẾ ĐỘ KHÁCH</button>
+            <button class="lol-sub-btn" onclick="closeModal('modal-auth-selection')" style="margin-top: 20px; border:none;">Đóng</button>
         </div>
     </div>
 
     <div id="modal-tutorial" class="modal hidden">
-        <div class="modal-content">
-            <h2>CÁCH CHƠI</h2>
-            <ul style="text-align: left; margin: 20px; color: #333;">
-                <li>🌻 <b>Hướng Dương:</b> Tạo ra Mặt trời.</li>
-                <li>🌱 <b>Bắn Đậu:</b> Tấn công Zombie.</li>
-                <li>🥔 <b>Củ Khoai:</b> Phòng thủ trâu bò.</li>
-                <li>🍃 <b>Thuốc Tăng Lực:</b> Mua trong Shop, dùng để tăng sức mạnh cây.</li>
-                <li>🛠 <b>Xẻng:</b> Dùng để nhổ bỏ cây đã trồng.</li>
+        <div class="modal-content" style="width:600px; text-align:left;">
+            <h2 style="color:var(--lol-gold); text-align:center;">HƯỚNG DẪN TÂN THỦ</h2>
+            <ul style="color: #a09b8c; line-height:1.8;">
+                <li>🌻 <b>Hướng Dương:</b> Tạo ra năng lượng mặt trời.</li>
+                <li>🌱 <b>Bắn Đậu:</b> Đơn vị tấn công cơ bản.</li>
+                <li>🥔 <b>Củ Khoai:</b> Đơn vị phòng thủ chịu đòn.</li>
+                <li>🍃 <b>Thuốc Tăng Lực:</b> Dùng trong Shop để kích hoạt kỹ năng tối thượng.</li>
             </ul>
-            <button class="wood-btn" onclick="closeModal('modal-tutorial')">Đã hiểu</button>
+            <div style="text-align:center; margin-top:20px;">
+                <button class="lol-sub-btn" onclick="closeModal('modal-tutorial')">ĐÃ HIỂU</button>
+            </div>
         </div>
     </div>
 
     <script type="module" src="src/main.js"></script>
     
     <script>
-        // Hàm đóng modal (Dùng chung)
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
