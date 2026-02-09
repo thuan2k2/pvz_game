@@ -3,127 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập - PvZ Clone</title>
+    <title>Đăng Nhập - PvZ Origins</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
     
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        /* --- HEX TECH THEME --- */
+        :root {
+            --hex-bg: #010a13;
+            --hex-panel: #0a1428; /* Xanh đậm LoL */
+            --hex-gold: #c8aa6e;
+            --hex-gold-hover: #f0e6d2;
+            --hex-blue: #005a82;
+            --hex-cyan: #0acbe6;
+            --hex-border: #3c3c41;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
         
         body {
             height: 100vh;
             overflow: hidden;
-            background-color: #222;
-        }
-
-        .bg-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('assets/bg.jpg') center/cover;
-            filter: brightness(0.4);
-            z-index: -1;
-        }
-
-        .login-wrapper {
+            background-color: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            width: 100%;
+            color: #f0e6d2;
+        }
+
+        /* Hình nền động hoặc tĩnh */
+        .bg-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://w.wallhaven.cc/full/lm/wallhaven-lmqgjl.jpg') center/cover;
+            filter: blur(5px) brightness(0.6); /* Làm mờ để nổi bật form */
+            z-index: -1;
+            transform: scale(1.1); /* Zoom nhẹ để tránh viền mờ */
         }
 
         .login-box {
-            background: #fff;
-            padding: 40px;
-            width: 400px;
-            border-radius: 10px;
+            background: rgba(10, 20, 40, 0.95); /* Nền bán trong suốt */
+            padding: 50px 40px;
+            width: 420px;
+            border: 2px solid var(--hex-gold);
+            border-top: 4px solid var(--hex-gold);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(200, 170, 110, 0.1);
             text-align: center;
-            border: 5px solid #8b4513;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
             position: relative;
         }
 
-        h1 { color: #333; margin-bottom: 25px; font-size: 2em; }
+        /* Góc trang trí kiểu Hextech */
+        .login-box::before {
+            content: ''; position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 4px; background: var(--hex-cyan);
+            box-shadow: 0 0 10px var(--hex-cyan);
+        }
 
-        .input-group { margin-bottom: 15px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        h1 { 
+            font-family: 'Cinzel', serif; 
+            color: var(--hex-gold); 
+            margin-bottom: 30px; 
+            font-size: 2.2em; 
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(200, 170, 110, 0.4);
+        }
+
+        .input-group { margin-bottom: 20px; text-align: left; }
+        
+        .input-group label { 
+            display: block; margin-bottom: 8px; 
+            font-size: 12px; font-weight: bold; 
+            color: #a09b8c; text-transform: uppercase; letter-spacing: 1px;
+        }
+        
         .input-group input {
-            width: 100%; padding: 12px;
-            border: 2px solid #ccc; border-radius: 5px;
-            font-size: 16px; outline: none;
+            width: 100%; padding: 12px 15px;
+            background: #1e2328; 
+            border: 1px solid var(--hex-border); 
+            color: #f0e6d2;
+            font-size: 14px; outline: none;
+            transition: 0.3s;
         }
-        .input-group input:focus { border-color: #e67e22; }
+        
+        .input-group input:focus { 
+            border-color: var(--hex-gold); 
+            background: #000;
+            box-shadow: 0 0 10px rgba(200, 170, 110, 0.2);
+        }
 
-        .wood-btn {
-            width: 100%; padding: 12px;
-            background: #8b4513; color: white;
-            border: 2px solid #5e2f0d; border-radius: 5px;
-            font-size: 1.1em; font-weight: bold;
+        /* Nút chính */
+        .hex-btn {
+            width: 100%; padding: 14px;
+            background: linear-gradient(to bottom, #1e2328, #13171d);
+            color: var(--hex-gold);
+            border: 1px solid var(--hex-gold);
+            font-size: 16px; font-weight: bold; letter-spacing: 1px;
             cursor: pointer; margin-top: 10px;
-            transition: 0.2s;
+            transition: 0.3s; text-transform: uppercase;
+            font-family: 'Cinzel', serif;
         }
-        .wood-btn:hover { background: #a0522d; }
-        .wood-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        .hex-btn:hover:not(:disabled) { 
+            background: linear-gradient(to bottom, #005a82, #004260);
+            border-color: var(--hex-cyan);
+            color: #fff;
+            text-shadow: 0 0 8px var(--hex-cyan);
+            box-shadow: 0 0 15px rgba(10, 203, 230, 0.4);
+        }
+        .hex-btn:disabled { 
+            opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); 
+        }
 
-        /* Style mới cho nút Google */
+        /* Nút Google */
         .google-btn {
-            background: #fff;
-            color: #444;
-            border: 2px solid #ddd;
+            background: #f0e6d2; 
+            color: #333; 
+            border: none;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
             margin-top: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            font-family: 'Roboto', sans-serif; font-weight: 500;
         }
-        .google-btn:hover { background: #f5f5f5; }
+        .google-btn:hover { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
         .google-btn img { width: 20px; }
 
-        .links { margin-top: 20px; font-size: 0.9em; color: #555; }
-        .links a { text-decoration: none; color: #d35400; font-weight: bold; }
-        .links a:hover { text-decoration: underline; }
+        /* Links */
+        .links { margin-top: 25px; font-size: 13px; color: #555; border-top: 1px solid #333; padding-top: 20px; }
+        .links a { text-decoration: none; color: #a09b8c; transition: 0.2s; font-weight: bold; }
+        .links a:hover { color: var(--hex-gold); text-shadow: 0 0 5px var(--hex-gold); }
+        
+        .back-link { display: block; margin-top: 15px; color: #555 !important; font-size: 12px; }
+        .back-link:hover { color: #888 !important; }
+
     </style>
 </head>
 <body>
 
     <div class="bg-layer"></div>
 
-    <div class="login-wrapper">
-        <div class="login-box">
-            <h1>ĐĂNG NHẬP</h1>
-            
-            <form id="form-login" onsubmit="event.preventDefault()">
-                <div class="input-group">
-                    <label>Email:</label>
-                    <input type="email" id="email" placeholder="Nhập email..." required>
-                </div>
-                
-                <div class="input-group">
-                    <label>Mật khẩu:</label>
-                    <input type="password" id="password" placeholder="Nhập mật khẩu..." required>
-                </div>
-
-                <button type="submit" id="btn-submit" class="wood-btn">VÀO GAME</button>
-            </form>
-
-            <button id="btn-google" class="wood-btn google-btn">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google">
-                Đăng nhập bằng Google
-            </button>
-
-            <div class="links">
-                Chưa có tài khoản? <a href="register.html">Đăng ký ngay</a>
-                <br>
-                <a href="forgot_password.html" style="color: #e74c3c; font-size: 0.9em;">Quên mật khẩu?</a>
-                <br><br>
-                <a href="index.html" style="color: #7f8c8d;">← Quay lại Trang chủ</a>
+    <div class="login-box">
+        <h1>ĐĂNG NHẬP</h1>
+        
+        <form id="form-login" onsubmit="event.preventDefault()">
+            <div class="input-group">
+                <label>Tên đăng nhập (Email)</label>
+                <input type="email" id="email" placeholder="Nhập email..." required>
             </div>
+            
+            <div class="input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu..." required>
+            </div>
+
+            <button type="submit" id="btn-submit" class="hex-btn">XÁC NHẬN</button>
+        </form>
+
+        <button id="btn-google" class="hex-btn google-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="google">
+            Đăng nhập với Google
+        </button>
+
+        <div class="links">
+            <a href="register.html">TẠO TÀI KHOẢN</a> 
+            <span style="color:#333; margin:0 10px;">|</span>
+            <a href="forgot_password.html">QUÊN MẬT KHẨU?</a>
+            
+            <a href="index.html" class="back-link">← QUAY LẠI TRANG CHỦ</a>
         </div>
     </div>
 
     <script type="module">
         import { auth } from './src/firebase/config.js';
         import { loginWithGoogle } from './src/firebase/auth.js';
-        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"; // Đảm bảo import đúng version
 
-        // Xử lý đăng nhập bằng Google
+        // [LOGIC] Đăng nhập Google
         document.getElementById('btn-google').addEventListener('click', async () => {
             try {
                 await loginWithGoogle();
@@ -136,6 +186,7 @@
             }
         });
 
+        // [LOGIC] Đăng nhập Email
         document.getElementById('btn-submit').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
@@ -144,10 +195,11 @@
             if (!email || !pass) return; 
 
             const originalText = btn.innerText;
-            btn.innerText = "Đang xử lý...";
+            btn.innerText = "ĐANG XỬ LÝ...";
             btn.disabled = true;
 
             try {
+                // Sử dụng hàm import trực tiếp thay vì auth.signIn... (nếu config cũ không export)
                 await signInWithEmailAndPassword(auth, email, pass);
                 window.location.href = "index.html";
             } catch (err) {
