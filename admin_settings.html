@@ -3,45 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cấu Hình Game - PvZ Admin</title>
+    <title>Cấu Hình Game - PvZ Origins Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+    
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #ecf0f1; display: flex; }
+        /* --- HEX TECH THEME --- */
+        :root {
+            --hex-bg: #010a13;
+            --hex-panel: #091428;
+            --hex-gold: #c8aa6e;
+            --hex-gold-dim: #785a28;
+            --hex-blue: #005a82;
+            --hex-cyan: #0acbe6;
+            --hex-border: #3c3c41;
+            --hex-text: #f0e6d2;
+            --hex-text-grey: #a09b8c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        
+        body { 
+            background: var(--hex-bg); 
+            color: var(--hex-text); 
+            display: block; 
+        }
         
         /* SIDEBAR */
-        .sidebar { width: 260px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; top: 0; left: 0; }
-        .sidebar h2 { color: #f1c40f; text-align: center; margin-bottom: 40px; border-bottom: 2px solid #34495e; padding-bottom: 20px; }
-        .menu-item { display: block; padding: 15px 20px; color: #ecf0f1; text-decoration: none; border-radius: 6px; margin-bottom: 10px; transition: 0.3s; }
-        .menu-item:hover { background: #34495e; transform: translateX(5px); }
-        .menu-item.active { background: #e67e22; color: white; font-weight: bold; }
-        .menu-item.back-btn { margin-top: 50px; background: #c0392b; text-align: center; }
+        .sidebar { 
+            width: 260px; 
+            background: rgba(1, 10, 19, 0.95); 
+            border-right: 2px solid var(--hex-gold-dim);
+            height: 100vh; 
+            padding: 20px; 
+            position: fixed; top: 0; left: 0;
+            z-index: 100; 
+            box-shadow: 5px 0 15px rgba(0,0,0,0.8);
+        }
+
+        .sidebar h2 { 
+            font-family: 'Cinzel', serif;
+            color: var(--hex-gold); 
+            text-align: center; margin-bottom: 40px; font-size: 1.8em;
+            text-transform: uppercase; letter-spacing: 2px;
+            border-bottom: 2px solid var(--hex-gold-dim); padding-bottom: 20px;
+            text-shadow: 0 0 10px rgba(200, 170, 110, 0.4);
+        }
+
+        .menu-item { 
+            display: block; padding: 15px 20px; 
+            color: var(--hex-text-grey); text-decoration: none; 
+            margin-bottom: 10px; font-family: 'Cinzel', serif; font-size: 14px;
+            transition: 0.3s; font-weight: bold; cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+        .menu-item:hover { color: var(--hex-text); background: rgba(255,255,255,0.05); }
+        .menu-item.active { 
+            color: var(--hex-gold); background: linear-gradient(90deg, rgba(200, 170, 110, 0.1), transparent);
+            border-left-color: var(--hex-gold);
+            text-shadow: 0 0 5px var(--hex-gold);
+        }
+        .menu-item.back-btn { 
+            margin-top: 50px; 
+            border: 1px solid var(--hex-border);
+            text-align: center; color: var(--hex-cyan);
+        }
+        .menu-item.back-btn:hover { border-color: var(--hex-cyan); background: rgba(10, 203, 230, 0.1); }
 
         /* MAIN CONTENT */
         .main-content { margin-left: 260px; padding: 40px; width: calc(100% - 260px); }
-        h1 { color: #2c3e50; margin-bottom: 30px; border-left: 5px solid #e67e22; padding-left: 15px; }
+        
+        h1 { 
+            font-family: 'Cinzel', serif; color: var(--hex-gold); margin-bottom: 30px; 
+            border-left: 5px solid var(--hex-cyan); padding-left: 15px; 
+            letter-spacing: 1px; font-size: 2em;
+        }
 
         /* SECTIONS */
-        .config-section { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .config-section h3 { color: #34495e; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .config-section { 
+            background: rgba(9, 20, 40, 0.8); 
+            border: 1px solid var(--hex-border); border-top: 3px solid var(--hex-gold-dim);
+            padding: 30px; margin-bottom: 30px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .config-section h3 { 
+            color: var(--hex-cyan); font-family: 'Cinzel', serif;
+            margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; 
+        }
 
         /* FORM ELEMENTS */
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 1em; }
-        .form-group input:focus { border-color: #3498db; }
-        .help-text { font-size: 0.85em; color: #7f8c8d; margin-top: 5px; }
+        .form-group label { 
+            display: block; font-weight: bold; margin-bottom: 8px; 
+            color: var(--hex-text-grey); font-size: 13px; text-transform: uppercase; 
+        }
+        
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 12px; 
+            background: #0e151f; border: 1px solid var(--hex-border); 
+            color: var(--hex-text); outline: none; font-size: 1em;
+            transition: 0.3s;
+        }
+        .form-group input:focus { border-color: var(--hex-gold); box-shadow: 0 0 10px rgba(200, 170, 110, 0.1); }
+        
+        .help-text { font-size: 0.85em; color: var(--hex-blue); margin-top: 5px; font-style: italic; }
 
-        /* TOGGLE SWITCH */
-        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        /* TOGGLE SWITCH (Custom Hex Style) */
+        .switch { position: relative; display: inline-block; width: 60px; height: 30px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #e74c3c; } /* Màu đỏ cho bảo trì */
-        input:checked + .slider:before { transform: translateX(26px); }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e2328; border: 1px solid var(--hex-border); transition: .4s; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: var(--hex-text-grey); transition: .4s; }
+        
+        input:checked + .slider { background-color: rgba(200, 170, 110, 0.2); border-color: var(--hex-gold); }
+        input:checked + .slider:before { transform: translateX(30px); background-color: var(--hex-gold); box-shadow: 0 0 10px var(--hex-gold); }
 
         /* BUTTONS */
-        .btn-save { background: #27ae60; color: white; padding: 15px 30px; border: none; border-radius: 6px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-save:hover { background: #2ecc71; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3); }
+        .btn-save { 
+            background: linear-gradient(to bottom, #1e2328, #13171d);
+            color: var(--hex-gold); border: 1px solid var(--hex-gold);
+            padding: 15px 40px; font-family: 'Cinzel', serif; font-size: 1.2em; font-weight: bold; 
+            cursor: pointer; transition: 0.3s; letter-spacing: 1px;
+            display: block; width: 100%; text-align: center;
+        }
+        .btn-save:hover { 
+            background: linear-gradient(to bottom, #005a82, #004260);
+            border-color: var(--hex-cyan); color: #fff;
+            text-shadow: 0 0 10px var(--hex-cyan);
+            box-shadow: 0 0 20px rgba(10, 203, 230, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -54,10 +142,10 @@
     </div>
 
     <div class="main-content">
-        <h1>Cấu Hình Hệ Thống</h1>
+        <h1>CẤU HÌNH HỆ THỐNG</h1>
 
         <div class="config-section">
-            <h3>🔴 Trạng thái Server</h3>
+            <h3 style="color:#e74c3c;">🔴 TRẠNG THÁI SERVER</h3>
             <div class="form-group">
                 <label>Chế độ Bảo trì (Maintenance Mode)</label>
                 <label class="switch">
@@ -72,12 +160,12 @@
             </div>
             <div class="form-group">
                 <label>Thông báo chào mừng (Banner):</label>
-                <input type="text" id="welcome-msg" placeholder="Ví dụ: Chào mừng bạn đến với PvZ Clone!">
+                <input type="text" id="welcome-msg" placeholder="Ví dụ: Chào mừng bạn đến với PvZ Origins!">
             </div>
         </div>
 
         <div class="config-section">
-            <h3>🟡 Cân bằng Kinh tế (Economy)</h3>
+            <h3 style="color:var(--hex-gold);">🟡 CÂN BẰNG KINH TẾ (Economy)</h3>
             <div class="form-group">
                 <label>Coin khởi tạo (Cho người mới đăng ký):</label>
                 <input type="number" id="starter-coins" value="0">
@@ -95,7 +183,7 @@
         </div>
 
         <div class="config-section">
-            <h3>🟢 Gameplay (Sắp cập nhật logic)</h3>
+            <h3 style="color:var(--hex-cyan);">🟢 GAMEPLAY</h3>
             <div class="form-group">
                 <label>Hệ số máu Zombie (Mặc định 1.0):</label>
                 <input type="number" step="0.1" id="zombie-hp" value="1.0">
