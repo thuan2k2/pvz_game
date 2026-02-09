@@ -32,6 +32,13 @@ export async function getSystemConfig() {
  */
 export async function loginWithGoogle() {
     const provider = new GoogleAuthProvider();
+    
+    // [FIX] Thêm tham số buộc Google hiện popup chọn tài khoản
+    // Tránh lỗi 'auth/popup-closed-by-user' do trình duyệt tự đóng popup
+    provider.setCustomParameters({
+        prompt: 'select_account'
+    });
+
     try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
@@ -50,8 +57,8 @@ export async function loginWithGoogle() {
                 coins: starterCoins,
                 vn_coin: 0, 
                 item_plant_food_count: 0,
-                item_broadcast_count: 0, // [MỚI] Thẻ đại gia
-                broadcast_queue: [], // [MỚI] Hàng đợi tên gói
+                item_broadcast_count: 0, 
+                broadcast_queue: [], 
                 inventory: [],
                 createdAt: new Date()
             });
@@ -59,6 +66,20 @@ export async function loginWithGoogle() {
         return user;
     } catch (error) {
         console.error("Lỗi đăng nhập Google:", error);
+        
+        // Xử lý các mã lỗi phổ biến của Popup
+        if (error.code === 'auth/popup-closed-by-user') {
+            throw new Error("Bạn đã tắt cửa sổ đăng nhập.");
+        }
+        if (error.code === 'auth/cancelled-popup-request') {
+            // Lỗi này xảy ra khi user click nhiều lần, có thể bỏ qua
+            console.warn("Popup bị hủy do yêu cầu mới.");
+            return null; 
+        }
+        if (error.code === 'auth/popup-blocked') {
+            throw new Error("Trình duyệt đã chặn cửa sổ đăng nhập. Vui lòng tắt chặn Pop-up.");
+        }
+        
         throw error;
     }
 }
@@ -81,8 +102,8 @@ export async function registerNewUser(email, password, phone) {
             coins: starterCoins,
             vn_coin: 0,
             item_plant_food_count: 0,
-            item_broadcast_count: 0, // [MỚI]
-            broadcast_queue: [], // [MỚI]
+            item_broadcast_count: 0, 
+            broadcast_queue: [], 
             inventory: [],
             createdAt: new Date()
         });
@@ -277,11 +298,8 @@ export async function buyShopItemWithLog(uid, itemData) {
             };
 
             // [MỚI] LOGIC TẶNG THẺ ĐẠI GIA (NẾU ĐƠN >= 400.000 VNCoin)
-            // Chỉ áp dụng khi mua bằng VNCoin và giá trị >= 400k
             if (itemData.currency === 'VNCoin' && price >= 400000) {
-                updates.item_broadcast_count = increment(1); // Cộng 1 thẻ
-                // Lưu tên gói hàng vào hàng đợi để thông báo sau
-                // Dùng trick thêm timestamp để tên gói luôn unique trong mảng
+                updates.item_broadcast_count = increment(1); 
                 const uniquePackName = `${itemData.name}#${Date.now()}`;
                 updates.broadcast_queue = arrayUnion(uniquePackName);
             }
@@ -357,16 +375,14 @@ export async function useBigSpenderCard(uid, email) {
             let newQueue = data.broadcast_queue || [];
             
             if (newQueue.length > 0) {
-                // Lấy phần tử đầu tiên (FIFO), cắt bỏ phần timestamp #...
                 const rawName = newQueue[0];
                 packageName = rawName.split('#')[0]; 
-                newQueue.shift(); // Xóa phần tử đầu
+                newQueue.shift(); 
             } else {
-                // Trường hợp Admin add thẻ thủ công mà không qua mua hàng
                 packageName = "Vật Phẩm Giá Trị Liên Thành";
             }
 
-            // Cập nhật User: Trừ thẻ và cập nhật lại hàng đợi
+            // Cập nhật User
             transaction.update(userRef, {
                 item_broadcast_count: increment(-1),
                 broadcast_queue: newQueue
