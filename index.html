@@ -12,7 +12,7 @@
         /* --- HEX TECH THEME --- */
         :root {
             --lol-dark-blue: #010a13;
-            --lol-panel-bg: rgba(1, 10, 19, 0.9);
+            --lol-panel-bg: rgba(1, 10, 19, 0.95);
             --lol-gold: #c8aa6e;
             --lol-gold-dim: #785a28;
             --lol-blue-bright: #005a82;
@@ -44,7 +44,7 @@
         /* --- GAME CONTAINER --- */
         #game-canvas { background: #000; display: block; margin: 0 auto; }
 
-        /* --- LOBBY SCREEN (STYLE LOL) --- */
+        /* --- LOBBY SCREEN --- */
         #lobby-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: url('https://w.wallhaven.cc/full/0q/wallhaven-0qpw3l.jpg') no-repeat center center/cover;
@@ -52,15 +52,15 @@
             display: flex; flex-direction: column;
         }
         
-        /* 1. TOP NAV BAR (FIX LỖI CANH GIỮA) */
+        /* 1. TOP NAV BAR */
         .lol-top-nav {
-            height: 80px; width: 100%; /* Đảm bảo full width */
+            height: 80px; width: 100%;
             background: linear-gradient(to bottom, #1e2328, #0a0c10);
             border-bottom: 2px solid var(--lol-gold-dim);
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 30px; box-sizing: border-box; /* Padding không làm vỡ width */
+            padding: 0 30px; box-sizing: border-box;
             box-shadow: 0 5px 20px rgba(0,0,0,0.8);
-            position: relative; z-index: 10;
+            position: relative; z-index: 50; /* Z-index cao hơn nội dung */
         }
 
         .nav-left { display: flex; align-items: center; gap: 40px; }
@@ -68,15 +68,14 @@
             font-family: 'Cinzel', serif; font-size: 24px; color: var(--lol-gold);
             text-shadow: 0 0 10px rgba(200, 170, 110, 0.5);
             font-weight: bold; letter-spacing: 2px;
-            cursor: default;
-            margin-right: 20px;
+            cursor: default; margin-right: 20px;
         }
         
         .lol-menu-item {
             font-size: 14px; font-weight: bold; text-transform: uppercase;
             color: var(--lol-text-grey); cursor: pointer;
             letter-spacing: 1.5px; transition: 0.3s;
-            position: relative; height: 80px; line-height: 80px; /* Canh giữa theo chiều dọc */
+            position: relative; height: 80px; line-height: 80px;
         }
         .lol-menu-item:hover, .lol-menu-item.active { color: #f0e6d2; text-shadow: 0 0 8px rgba(240, 230, 210, 0.6); }
         .lol-menu-item.active::after {
@@ -102,107 +101,149 @@
             box-shadow: 0 0 10px var(--lol-gold);
         }
 
-        /* 2. MAIN CONTENT AREA (FIX LAYOUT) */
+        /* 2. MAIN CONTENT AREA */
         .lol-main-content { 
             flex: 1; display: flex; position: relative; 
-            overflow: hidden; /* Tránh thanh cuộn thừa */
+            overflow: hidden; 
         }
 
+        /* BANNER (HOME VIEW) */
         .featured-banner {
-            flex: 1; 
-            /* Xóa margin cứng để banner tràn màn hình bên trái */
-            margin: 0; 
-            position: relative;
+            flex: 1; position: relative;
             display: flex; flex-direction: column; justify-content: flex-end;
-            padding: 40px; /* Padding nội dung bên trong */
+            padding: 40px;
+            transition: opacity 0.3s;
         }
-        
-        /* FIX DANH SÁCH BẠN BÈ (SOCIAL SIDEBAR) */
-        .lol-social-sidebar {
-            width: 280px; 
-            background: rgba(1, 10, 19, 0.95);
-            border-left: 2px solid #1e2328;
-            /* Neo vào bên phải */
-            position: relative; 
-            right: 0; top: 0; bottom: 0;
+        .featured-banner.fade-out { opacity: 0; pointer-events: none; }
+
+        /* --- SHOP VIEW (INTEGRATED) --- */
+        #shop-view-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); /* Nền tối đè lên ảnh nền lobby */
+            backdrop-filter: blur(5px);
+            z-index: 40;
             display: flex; flex-direction: column;
-            padding: 15px;
-            z-index: 5;
         }
-        .social-header { 
-            font-size: 13px; font-weight: bold; color: var(--lol-text-grey); 
-            margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;
+
+        /* SHOP TABS (Horizontal) */
+        .shop-tabs-bar {
+            height: 60px; width: 100%;
+            background: linear-gradient(to right, rgba(1,10,19,0.9), rgba(30,35,40,0.9));
+            border-bottom: 1px solid var(--lol-border);
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
+
+        .shop-tab-item {
+            padding: 0 25px; height: 60px; line-height: 60px;
+            color: var(--lol-text-grey); font-family: 'Cinzel', serif; font-size: 13px; font-weight: bold;
+            cursor: pointer; transition: 0.3s; position: relative; letter-spacing: 1px;
+        }
+        .shop-tab-item:hover { color: #f0e6d2; background: rgba(255,255,255,0.05); }
+        .shop-tab-item.active { color: var(--lol-gold); text-shadow: 0 0 8px var(--lol-gold); }
+        .shop-tab-item.active::after {
+            content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--lol-gold), transparent);
+        }
+
+        /* SHOP CONTENT AREA */
+        .shop-content-area {
+            flex: 1; padding: 40px; overflow-y: auto;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;
+        }
+        /* Custom Scrollbar */
+        .shop-content-area::-webkit-scrollbar { width: 8px; }
+        .shop-content-area::-webkit-scrollbar-thumb { background: var(--lol-gold-dim); border-radius: 4px; }
+
+        /* SHOP CARD (Dummy Style for JS rendering) */
+        .shop-card-dummy {
+            background: #0e151f; border: 1px solid var(--lol-border); padding: 15px;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            transition: 0.2s; cursor: pointer;
+        }
+        .shop-card-dummy:hover { border-color: var(--lol-gold); transform: translateY(-5px); }
+
+        /* --- FRIEND LIST (SLIDING SIDEBAR) --- */
+        /* Nút Toggle bên phải */
+        .friend-list-toggle {
+            position: absolute; right: 0; top: 100px; /* Dưới nav bar */
+            width: 40px; height: 40px;
+            background: var(--lol-dark-blue); border: 1px solid var(--lol-gold); border-right: none;
+            color: var(--lol-gold); font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 45; border-radius: 5px 0 0 5px;
+            transition: 0.3s;
+        }
+        .friend-list-toggle:hover { width: 50px; background: #1e2328; }
+
+        /* Sidebar trượt */
+        .lol-friend-sidebar {
+            width: 300px; height: calc(100% - 80px); /* Trừ top bar */
+            position: fixed; right: -300px; bottom: 0; /* Ẩn bên phải */
+            background: var(--lol-panel-bg);
+            border-left: 2px solid var(--lol-gold-dim);
+            transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 60; display: flex; flex-direction: column;
+            padding: 20px; box-shadow: -5px 0 20px rgba(0,0,0,0.8);
+        }
+        .lol-friend-sidebar.active { right: 0; }
+
+        .friend-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--lol-border); padding-bottom: 10px; margin-bottom: 15px;
+        }
+        .friend-header h3 { font-size: 14px; color: var(--lol-text-grey); margin: 0; text-transform: uppercase; }
+        
         .friend-item {
             display: flex; align-items: center; gap: 10px; padding: 10px;
-            transition: 0.2s; cursor: pointer; border-radius: 4px;
+            transition: 0.2s; cursor: pointer; border-radius: 4px; margin-bottom: 5px;
         }
         .friend-item:hover { background: rgba(255,255,255,0.05); }
-        .friend-avatar { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--lol-gold); }
+        .friend-avatar { width: 35px; height: 35px; border-radius: 50%; border: 1px solid var(--lol-gold); background-color: #000; }
         .friend-info { font-size: 13px; color: #cdbe91; font-weight: 500; }
         .friend-status { font-size: 11px; color: var(--lol-cyan); }
 
-        /* FIX VỊ TRÍ NÚT PLAY & HƯỚNG DẪN */
+        /* --- ACTION BUTTONS (Start & Tutorial) --- */
         .lol-action-area {
-            /* Neo tuyệt đối vào góc dưới bên phải của banner (trước sidebar) */
             position: absolute; 
             bottom: 50px; 
-            right: 320px; /* Cách sidebar (280px) + khoảng đệm */
+            right: 60px; /* Dời sát phải, vì friend list giờ là overlay */
             display: flex; gap: 20px; align-items: flex-end;
-            z-index: 20;
+            z-index: 30; /* Cao hơn banner nhưng thấp hơn Shop/FriendSidebar */
         }
 
-        /* NÚT PLAY ĐẶC TRƯNG */
         .lol-play-btn {
             background: linear-gradient(to bottom, #1e2328, #13171d);
             border: 2px solid var(--lol-blue-bright);
             color: #f0e6d2;
             font-family: 'Cinzel', serif;
             font-size: 24px; font-weight: bold; letter-spacing: 2px;
-            padding: 15px 60px; /* To hơn */
-            cursor: pointer;
-            position: relative;
+            padding: 15px 60px;
+            cursor: pointer; position: relative;
             box-shadow: 0 0 20px rgba(0, 90, 130, 0.6);
-            transition: 0.3s;
-            text-transform: uppercase;
-            /* Tạo hình bình hành nhẹ nếu muốn giống LoL hơn */
+            transition: 0.3s; text-transform: uppercase;
             transform: skew(-10deg); 
         }
-        /* Chỉnh lại text bên trong nút do skew */
         .lol-play-btn span { display: block; transform: skew(10deg); }
-        
         .lol-play-btn:hover:not(:disabled) {
             background: linear-gradient(to bottom, #005a82, #004260);
-            border-color: var(--lol-cyan);
-            text-shadow: 0 0 10px #fff;
+            border-color: var(--lol-cyan); text-shadow: 0 0 10px #fff;
             box-shadow: 0 0 30px var(--lol-cyan);
         }
-        
-        .lol-play-btn:disabled { 
-            filter: grayscale(1); opacity: 0.6; cursor: not-allowed; 
-            border-color: #333;
-        }
+        .lol-play-btn:disabled { filter: grayscale(1); opacity: 0.6; cursor: not-allowed; border-color: #333; }
 
-        /* Nút phụ (Hướng dẫn) - FIX LỖI TÀNG HÌNH */
         .lol-sub-btn {
-            background: rgba(1, 10, 19, 0.8); /* Thêm màu nền */
+            background: rgba(1, 10, 19, 0.8);
             border: 1px solid var(--lol-gold-dim);
-            color: var(--lol-gold); 
-            padding: 12px 30px;
+            color: var(--lol-gold); padding: 12px 30px;
             font-weight: bold; cursor: pointer; transition: 0.2s;
             font-size: 14px; text-transform: uppercase; letter-spacing: 1px;
-            /* Tạo hình bình hành */
             transform: skew(-10deg);
         }
         .lol-sub-btn span { display: block; transform: skew(10deg); }
+        .lol-sub-btn:hover { border-color: #f0e6d2; color: #f0e6d2; background: rgba(200, 170, 110, 0.2); }
 
-        .lol-sub-btn:hover { 
-            border-color: #f0e6d2; color: #f0e6d2; 
-            background: rgba(200, 170, 110, 0.2); 
-            box-shadow: 0 0 10px rgba(200, 170, 110, 0.3);
-        }
-
-        /* --- MODALS --- */
+        /* --- MODALS & GAME UI --- */
         .modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.8); z-index: 2000; 
@@ -212,8 +253,7 @@
         .modal-content {
             background: #010a13; border: 2px solid var(--lol-gold);
             padding: 30px; width: 400px; text-align: center;
-            box-shadow: 0 0 30px rgba(200, 170, 110, 0.2);
-            color: #f0e6d2;
+            box-shadow: 0 0 30px rgba(200, 170, 110, 0.2); color: #f0e6d2;
         }
         .auth-choice-btn {
             width: 100%; padding: 12px; margin: 8px 0;
@@ -248,8 +288,8 @@
         <div class="lol-top-nav">
             <div class="nav-left">
                 <div class="lol-logo-text">PvZ: ORIGINS</div>
-                <div class="lol-menu-item active">TRANG CHỦ</div>
-                <div class="lol-menu-item" onclick="window.location.href='shop.html'">CỬA HÀNG</div>
+                <div class="lol-menu-item active" id="nav-home" onclick="switchMainView('home')">TRANG CHỦ</div>
+                <div class="lol-menu-item" id="nav-shop" onclick="switchMainView('shop')">CỬA HÀNG</div>
                 <div class="lol-menu-item hidden" id="btn-admin-nav" onclick="window.location.href='admin.html'">QUẢN TRỊ</div>
             </div>
             
@@ -270,27 +310,48 @@
         </div>
 
         <div class="lol-main-content">
-            <div class="featured-banner">
+            
+            <div id="home-view" class="featured-banner">
                 <div style="position: absolute; top: 15%; left: 5%; color: white; text-shadow: 0 0 10px black; width: 400px;">
                     <h3 style="color:var(--lol-gold); font-size:14px; letter-spacing:2px; margin-bottom:5px;">SỰ KIỆN MỚI</h3>
                     <h1 style="font-family: 'Cinzel', serif; font-size: 48px; margin: 0; color: #fff; line-height: 1.1;">THỨC TỈNH<br>WALL-NUT</h1>
                     <p style="color: #a09b8c; margin-top: 15px; font-size: 14px; line-height: 1.5;">
-                        Tham gia ngay chế độ phiêu lưu để nhận trang phục Wall-nut Hoàng Kim giới hạn và hàng ngàn phần quà hấp dẫn.
+                        Tham gia ngay chế độ phiêu lưu để nhận trang phục Wall-nut Hoàng Kim giới hạn.
                     </p>
                 </div>
             </div>
 
-            <div class="lol-action-area">
+            <div id="shop-view-container" class="hidden">
+                <div class="shop-tabs-bar">
+                    <div class="shop-tab-item active" onclick="switchShopTab('vncoin', this)">✨ CỬA HÀNG VIP</div>
+                    <div class="shop-tab-item" onclick="switchShopTab('coin', this)">💰 CỬA HÀNG THƯỜNG</div>
+                    <div class="shop-tab-item" onclick="switchShopTab('deposit', this)">💳 NẠP TÀI KHOẢN</div>
+                    <div class="shop-tab-item" onclick="switchShopTab('deposit-history', this)">📜 LỊCH SỬ NẠP</div>
+                    <div class="shop-tab-item" onclick="switchShopTab('inventory', this)">🎒 KHO ĐỒ</div>
+                    <div class="shop-tab-item" onclick="switchShopTab('history', this)">🧾 LỊCH SỬ MUA</div>
+                </div>
+                <div class="shop-content-area" id="shop-main-content">
+                    <div style="color:white; text-align:center; margin-top:50px;">Đang tải dữ liệu cửa hàng...</div>
+                </div>
+            </div>
+
+            <div id="home-actions" class="lol-action-area">
                 <button class="lol-sub-btn" id="btn-tutorial"><span>HƯỚNG DẪN</span></button>
                 <button id="btn-start-game" class="lol-play-btn" disabled><span>ĐẤU NGAY</span></button>
             </div>
 
-            <div class="lol-social-sidebar">
-                <div class="social-header">DANH SÁCH BẠN BÈ (0/0)</div>
+            <div class="friend-list-toggle" onclick="toggleFriendList()">👥</div>
+
+            <div class="lol-friend-sidebar" id="friend-sidebar">
+                <div class="friend-header">
+                    <h3>Danh sách bạn bè (0/0)</h3>
+                    <span style="cursor:pointer; font-size:18px;" onclick="toggleFriendList()">✕</span>
+                </div>
                 <div style="flex:1; display:flex; justify-content:center; align-items:center; color:#555; font-size:12px; font-style:italic;">
                     Chưa có bạn bè online
                 </div>
-                </div>
+            </div>
+
         </div>
     </div>
 
@@ -375,6 +436,84 @@
     <script>
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
+        }
+
+        // Toggle Friend List Sidebar
+        function toggleFriendList() {
+            const sidebar = document.getElementById('friend-sidebar');
+            sidebar.classList.toggle('active');
+        }
+
+        // Chuyển đổi View: Trang Chủ <-> Cửa Hàng
+        function switchMainView(viewName) {
+            const homeView = document.getElementById('home-view');
+            const shopContainer = document.getElementById('shop-view-container');
+            const homeActions = document.getElementById('home-actions');
+            
+            const navHome = document.getElementById('nav-home');
+            const navShop = document.getElementById('nav-shop');
+
+            if (viewName === 'shop') {
+                // Vào Shop
+                homeView.style.opacity = '0'; // Làm mờ banner
+                setTimeout(() => {
+                    homeView.classList.add('hidden');
+                    shopContainer.classList.remove('hidden');
+                }, 300);
+                
+                homeActions.classList.add('hidden'); // Ẩn nút Start
+                
+                navHome.classList.remove('active');
+                navShop.classList.add('active');
+                
+                // Mặc định load tab đầu tiên
+                switchShopTab('vncoin', document.querySelector('.shop-tab-item'));
+                
+            } else {
+                // Về Home
+                shopContainer.classList.add('hidden');
+                homeView.classList.remove('hidden');
+                setTimeout(() => homeView.style.opacity = '1', 10);
+                
+                homeActions.classList.remove('hidden');
+                
+                navShop.classList.remove('active');
+                navHome.classList.add('active');
+            }
+        }
+
+        // Chuyển đổi Tab trong Shop
+        function switchShopTab(type, el) {
+            // UI Tab Update
+            document.querySelectorAll('.shop-tab-item').forEach(item => item.classList.remove('active'));
+            if(el) el.classList.add('active');
+
+            const contentArea = document.getElementById('shop-main-content');
+            contentArea.innerHTML = `<div style="text-align:center; color:#888; padding:20px;">Đang tải dữ liệu: ${type}...</div>`;
+
+            // Tại đây bạn có thể gọi hàm JS để render dữ liệu thật
+            // Ví dụ: window.renderShopItems(type, contentArea);
+            // Hiện tại tôi sẽ render giả lập để thấy layout
+            
+            setTimeout(() => {
+                let html = '';
+                if(type === 'vncoin' || type === 'coin') {
+                    for(let i=0; i<8; i++) {
+                        html += `
+                            <div class="shop-card-dummy">
+                                <div style="width:100%; height:120px; background:#000; margin-bottom:10px;">IMG</div>
+                                <div style="color:#c8aa6e; font-weight:bold;">Gói Vật Phẩm ${i+1}</div>
+                                <div style="color:#0acbe6; font-size:12px;">50,000 Xu</div>
+                            </div>
+                        `;
+                    }
+                } else if(type === 'deposit') {
+                    html = `<div style="text-align:center; color:white;">Form Nạp Thẻ sẽ hiện ở đây</div>`;
+                } else {
+                    html = `<div style="text-align:center; color:white;">Danh sách ${type} trống</div>`;
+                }
+                contentArea.innerHTML = html;
+            }, 500);
         }
     </script>
 </body>

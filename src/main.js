@@ -7,6 +7,7 @@ import { doc, onSnapshot, collection, query, orderBy, limit } from 'firebase/fir
 import GameCore from './game/GameCore.js'; 
 import { loadImages } from './game/Resources.js';
 import { fetchPlantsFromServer } from './plantsData.js';
+import { renderShopContent } from './ShopSystem.js';
 
 // [CẬP NHẬT UI MAPPING] - Đồng bộ với index.html mới
 const ui = {
@@ -308,7 +309,55 @@ function initGameEvents() {
     ui.canvas.width = 1200; 
     ui.canvas.height = 600;
 
-    // AUTH Events
+    // --- SỰ KIỆN UI CHÍNH --- //
+
+    // 1. Chuyển đổi View: Trang Chủ <-> Cửa Hàng
+    window.switchMainView = (viewName) => {
+        const homeView = document.getElementById('home-view');
+        const shopContainer = document.getElementById('shop-view-container');
+        const homeActions = document.getElementById('home-actions');
+        const navHome = document.getElementById('nav-home');
+        const navShop = document.getElementById('nav-shop');
+
+        if (viewName === 'shop') {
+            homeView.classList.add('hidden');
+            homeActions.classList.add('hidden');
+            shopContainer.classList.remove('hidden');
+            
+            navHome.classList.remove('active');
+            navShop.classList.add('active');
+            
+            // Load tab mặc định
+            const defaultTab = document.querySelector('.shop-tab-item');
+            if(defaultTab) window.switchShopTab('vncoin', defaultTab);
+        } else {
+            shopContainer.classList.add('hidden');
+            homeView.classList.remove('hidden');
+            homeActions.classList.remove('hidden');
+            
+            navShop.classList.remove('active');
+            navHome.classList.add('active');
+        }
+    };
+
+    // 2. Chuyển đổi Tab trong Shop (Gọi ShopSystem)
+    window.switchShopTab = (type, el) => {
+        // UI
+        document.querySelectorAll('.shop-tab-item').forEach(item => item.classList.remove('active'));
+        if(el) el.classList.add('active');
+
+        // Logic
+        const contentArea = document.getElementById('shop-main-content');
+        renderShopContent(type, contentArea);
+    };
+
+    // 3. Toggle Friend List
+    window.toggleFriendList = () => {
+        const sidebar = document.getElementById('friend-sidebar');
+        if(sidebar) sidebar.classList.toggle('active');
+    };
+
+    // 4. AUTH Events
     if (ui.btnOpenAuth) {
         ui.btnOpenAuth.addEventListener('click', () => {
             if(!auth.currentUser && !currentState.isGuestActive) {
@@ -335,7 +384,7 @@ function initGameEvents() {
         });
     }
 
-    // START GAME
+    // 5. START GAME
     if (ui.btnStartGame) {
         ui.btnStartGame.addEventListener('click', () => {
             if (!isDataValid) return;
@@ -351,7 +400,7 @@ function initGameEvents() {
         });
     }
 
-    // TUTORIAL
+    // 6. TUTORIAL
     const btnTutorial = document.getElementById('btn-tutorial');
     if (btnTutorial) {
         btnTutorial.addEventListener('click', () => {
@@ -360,7 +409,7 @@ function initGameEvents() {
         });
     }
 
-    // IN-GAME CONTROLS (Pause, Resume, Restart, Quit)
+    // 7. IN-GAME CONTROLS (Pause, Resume, Restart, Quit)
     const btnPause = document.getElementById('btn-pause-game');
     if (btnPause) btnPause.addEventListener('click', () => { if(gameInstance) gameInstance.togglePause(); });
 
