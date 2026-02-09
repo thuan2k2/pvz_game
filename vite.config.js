@@ -11,7 +11,7 @@ export default defineConfig({
         admin_settings: resolve(__dirname, 'admin_settings.html'),
         forgot_password: resolve(__dirname, 'forgot_password.html'),
         register: resolve(__dirname, 'register.html'),
-        shop: resolve(__dirname, 'shop.html'), // [MỚI] Thêm dòng này
+        // Đã xóa dòng shop.html để fix lỗi build
       }
     }
   }
