@@ -75,9 +75,9 @@ async function renderShopItems(currencyType, container) {
 function renderDepositForm(container) {
     // Thông tin tài khoản nhận tiền (Bạn hãy sửa lại thông tin thật của mình ở đây)
     const BANK_INFO = {
-        BANK_NAME: "MBBank", // Tên ngân hàng (VD: MBBank, VCB, TPBank...)
-        ACC_NUM: "0000123456789", // Số tài khoản
-        ACC_NAME: "NGUYEN VAN A", // Tên chủ tài khoản
+        BANK_NAME: "TPBANK", // Tên ngân hàng (VD: MBBank, VCB, TPBank...)
+        ACC_NUM: "00006464313", // Số tài khoản
+        ACC_NAME: "PHAM DUC THUAN", // Tên chủ tài khoản
         TEMPLATE: "compact" // compact, print, qr_only
     };
 
