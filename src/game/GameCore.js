@@ -82,7 +82,7 @@ export default class GameCore {
                     c.style.borderColor = 'transparent'; 
                 });
                 document.getElementById('shovel-tool').classList.remove('selected');
-                document.getElementById('plant-food-tool').classList.remove('selected');
+                // Plant Food tool xử lý riêng
                 
                 card.classList.add('selected');
                 card.style.borderColor = 'gold'; 
@@ -98,7 +98,6 @@ export default class GameCore {
             shovelBtn.addEventListener('click', () => {
                 this.selectedTool = 'shovel';
                 shovelBtn.classList.add('selected');
-                document.getElementById('plant-food-tool').classList.remove('selected');
                 document.querySelectorAll('.plant-card').forEach(c => {
                     c.classList.remove('selected');
                     c.style.borderColor = 'transparent';
@@ -114,8 +113,7 @@ export default class GameCore {
 
                 if (this.plantFoodCount > 0) {
                     this.selectedTool = 'plant_food';
-                    pfBtn.classList.add('selected');
-                    document.getElementById('shovel-tool').classList.remove('selected');
+                    // Reset các công cụ khác
                     document.querySelectorAll('.plant-card').forEach(c => {
                         c.classList.remove('selected');
                         c.style.borderColor = 'transparent';
@@ -192,10 +190,16 @@ export default class GameCore {
         this.cooldownTimer = 180;
         this.spawnTimer = 0;
         
+        // [CẬP NHẬT UI] Ẩn/Hiện các thành phần game
         document.getElementById('overlay-screen').classList.add('hidden');
         document.getElementById('modal-pause-menu').classList.add('hidden');
-        document.getElementById('bottom-toolbar').classList.remove('hidden');
-        document.getElementById('btn-pause-game').classList.remove('hidden');
+        
+        // Hiện HUD Game
+        const gameHeader = document.getElementById('game-header');
+        if(gameHeader) gameHeader.style.display = 'block'; // Dùng style trực tiếp vì id mới
+        
+        const bottomToolbar = document.getElementById('bottom-toolbar');
+        if(bottomToolbar) bottomToolbar.classList.remove('hidden');
         
         this.renderPlantShopBar();
 
@@ -208,14 +212,9 @@ export default class GameCore {
         
         container.innerHTML = ''; 
         
-        container.style.display = 'flex';
-        container.style.flexDirection = 'row';
-        container.style.gap = '10px';
-        container.style.padding = '5px';
-        container.style.overflowX = 'auto'; 
-        container.style.alignItems = 'center';
+        // Style cho container đã được CSS lo (flex), chỉ cần thêm thẻ con
         
-        // Chỉ lấy dữ liệu Cây từ Admin (type = plants)
+        // Lọc cây
         const plantsArray = Object.entries(PLANT_DATA).filter(([id, data]) => {
             return (data.type === 'plants' || !data.type) && data.cost !== undefined;
         });
@@ -231,22 +230,20 @@ export default class GameCore {
             card.className = 'plant-card';
             card.setAttribute('data-type', id);
             
+            // Style thẻ bài (ghi đè CSS nếu cần thiết, hoặc để CSS lo)
             card.style.position = 'relative';
-            card.style.width = '70px'; 
-            card.style.height = '90px'; 
-            card.style.border = '2px solid transparent';
-            card.style.borderRadius = '5px';
+            card.style.width = '60px'; 
+            card.style.height = '80px'; 
+            card.style.border = '2px solid #3c3c41'; // Màu viền LoL
+            card.style.borderRadius = '4px';
             card.style.cursor = 'pointer';
-            card.style.backgroundColor = 'rgba(0,0,0,0.5)';
-            card.style.flexShrink = '0'; 
-            card.style.display = 'flex';
-            card.style.flexDirection = 'column';
-            card.style.alignItems = 'center';
-            card.style.justifyContent = 'center';
+            card.style.backgroundColor = '#010a13';
+            card.style.flexShrink = '0';
+            card.style.marginRight = '5px'; 
 
             if (index === 0) {
                 card.classList.add('selected');
-                card.style.borderColor = 'gold';
+                card.style.borderColor = '#c8aa6e'; // Vàng LoL
                 this.selectedPlantType = id;
             }
 
@@ -255,7 +252,7 @@ export default class GameCore {
             const fallbackSrc = 'assets/card/Peashooter.png';
 
             card.innerHTML = `
-                <div class="card-cost" style="position:absolute; bottom:2px; right:2px; font-size:14px; font-weight:bold; color:black; text-shadow:0 0 2px white; background:rgba(255,255,255,0.7); padding:0 2px; border-radius:2px;">${plant.cost}</div>
+                <div class="card-cost" style="position:absolute; bottom:2px; right:2px; font-size:11px; font-weight:bold; color:#0acbe6; text-shadow:1px 1px 0 #000;">${plant.cost}</div>
                 <img src="${imgSrc}" alt="${plant.name}" style="width:100%; height:100%; object-fit:contain;" onerror="this.src='${fallbackSrc}'">
             `;
             container.appendChild(card);
@@ -311,7 +308,6 @@ export default class GameCore {
             this.cooldownTimer--;
             if (this.cooldownTimer <= 0) {
                 this.isWaveCooldown = false;
-                // Vẫn dùng config wave để lấy thời gian, nhưng không lấy danh sách zombie cứng
                 const config = WAVE_CONFIG[this.currentWaveIndex];
                 if (config) {
                     this.waveDuration = this.getRandomDuration(config.minDuration, config.maxDuration);
@@ -334,12 +330,11 @@ export default class GameCore {
             if (this.spawnTimer >= currentRate) {
                 this.spawnTimer = 0;
                 
-                // [FIX QUAN TRỌNG] Chỉ chọn Zombie từ danh sách Admin
+                // [LOGIC ZOMBIE TỪ ADMIN]
                 const availableZombies = Object.keys(PLANT_DATA).filter(key => PLANT_DATA[key].type === 'zombies');
                 
                 let zombieType;
                 if (availableZombies.length > 0) {
-                    // Chọn ngẫu nhiên
                     zombieType = availableZombies[Math.floor(Math.random() * availableZombies.length)];
                 } else {
                     console.warn("Chưa có zombie nào trong Admin!");
@@ -402,7 +397,7 @@ export default class GameCore {
                     this.updatePlantFoodUI();
                     if (auth.currentUser) useGameItem(auth.currentUser.uid, 'plant_food');
                     this.selectedTool = 'plant';
-                    document.getElementById('plant-food-tool').classList.remove('selected');
+                    // Không cần remove class selected vì UI đã lo
                     return;
                 }
             }
@@ -663,10 +658,10 @@ export default class GameCore {
         document.getElementById('btn-restart').onclick = () => this.start();
         document.getElementById('btn-back-lobby').onclick = () => {
             overlay.classList.add('hidden');
-            document.getElementById('bottom-toolbar').classList.add('hidden');
-            document.getElementById('btn-pause-game').classList.add('hidden');
-            document.getElementById('lobby-screen').classList.remove('hidden');
-            setTimeout(() => window.location.reload(), 500);
+            // Logic quay lại sảnh (đã có event listener ở main.js xử lý UI)
+            document.body.classList.remove('in-game');
+            document.getElementById('lobby-screen').style.display = 'flex';
+            window.location.reload(); // Reload để reset trạng thái sạch sẽ
         };
     }
 }
